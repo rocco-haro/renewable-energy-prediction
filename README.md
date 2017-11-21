@@ -1,5 +1,5 @@
 # Versions
-* Tensorflow v1.1
+* Tensorflow v1.3
 
 # Power-Prediction
 Produce a temporal prediction of overall substation power generation & consumption.
