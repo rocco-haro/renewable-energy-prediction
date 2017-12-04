@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Optional, Tuple
 
-def getSingleSeriesDataOfSize(maxDataPoints, tag):
+def getSingleSeriesDataOfSize(maxDataPoints, tag, fileTarget):
     def getStartingPt(numOfPs):
         starting = int(numOfPs * np.random.rand())
         #print("numOfPs: ", numOfPs)
@@ -14,7 +14,8 @@ def getSingleSeriesDataOfSize(maxDataPoints, tag):
     counter = 0
     #print("path: ", tag)
     #print("Return number of :" +str(maxDataPoints))
-    with open('varyingData/moving/moving_powerGeneratedWindTurbine'+tag, 'r') as readF:
+    filePath = fileTarget+tag
+    with open(filePath, 'r') as readF: # TODO removed the tag
         for line in readF:
             if counter == 0:
                 numOfPts = int(line)
@@ -26,7 +27,7 @@ def getSingleSeriesDataOfSize(maxDataPoints, tag):
 
                 if counter >= counterStart and (counter - counterStart) < maxDataPoints:
                 #    print("counter: " + str(counter))
-                    arr.append(int(line))
+                    arr.append(float(line))
                 elif (counter - counterStart) >= maxDataPoints:
                     break
             counter+=1
@@ -34,10 +35,10 @@ def getSingleSeriesDataOfSize(maxDataPoints, tag):
                 #break
     #print("Size: ", str(len(arr)))
     if len(arr) != maxDataPoints:
-        arr = getSingleSeriesDataOfSize(maxDataPoints, tag)
+        arr = getSingleSeriesDataOfSize(maxDataPoints, tag, fileTarget)
     return arr
 
-def generate_sample(f: Optional[float] = 1.0, t0: Optional[float] = None, batch_size: int = 1,
+def generate_sample(fileTarget="",f: Optional[float] = 1.0, t0: Optional[float] = None, batch_size: int = 1,
                     predict: int = 50, samples: int = 100) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generates data samples.
@@ -69,7 +70,7 @@ def generate_sample(f: Optional[float] = 1.0, t0: Optional[float] = None, batch_
         # if freq is None:
         #     freq = np.random.rand() * 3.5 + 0.5
 
-            y = np.array(getSingleSeriesDataOfSize(predict+samples, "_TRAIN")) # np.sin(2 * np.pi * freq * (t + t0))
+            y = np.array(getSingleSeriesDataOfSize(predict+samples, "_TRAIN", fileTarget)) # np.sin(2 * np.pi * freq * (t + t0))
         #    print(np.shape(y))
         #    z = input()
             T[i, :] = t[0:samples]
@@ -78,7 +79,7 @@ def generate_sample(f: Optional[float] = 1.0, t0: Optional[float] = None, batch_
             FT[i, :] = t[samples:samples + predict]
             FY[i, :] = y[samples:samples + predict]
         else:
-            y = np.array(getSingleSeriesDataOfSize(predict+samples, "_TEST")) # np.sin(2 * np.pi * freq * (t + t0))
+            y = np.array(getSingleSeriesDataOfSize(predict+samples, "_TEST", fileTarget)) # np.sin(2 * np.pi * freq * (t + t0))
 
             T[i, :] = t[0:samples]
             Y[i, :] = y[0:samples]
