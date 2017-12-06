@@ -11,13 +11,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 # noinspection PyUnresolvedReferences
 import seaborn as sns
+import os
 
 import tensorflow as tf
 from tensorflow.contrib import rnn
 
 class StackedLSTM:
-    def __init__(self,dataFileTarget="",learning_rate=0.05,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 10 , display_step = 100  ):
+    def __init__(self,dataFileTarget="",modelName="_Unnamed!", learning_rate=0.00025,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 40 , display_step = 100  ):
+        """ dataFileTarget="",modelName, learning_rate=0.005,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 10 , display_step = 100
+        """
         self.dataFileTarget = dataFileTarget
+        self.modelName = modelName
         self.learning_rate = learning_rate
         self.training_iters = training_iters
         self.training_iter_step_down_every = training_iter_step_down_every
@@ -26,7 +30,7 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
-    def networkParams(self, n_input = 1,n_steps = 20, n_hidden= 20, n_outputs = 2 , n_layers = 5, loading=False  ):
+    def networkParams(self, n_input = 1,n_steps = 20, n_hidden= 20, n_outputs = 5 , n_layers = 20, loading=False  ):
         # Network Parameters
         self.n_input = n_input # input is sin(x), a scalar
         self.n_steps = n_steps  # historical time steps look back
@@ -74,16 +78,15 @@ class StackedLSTM:
                 sess.run(init)
                 step = 1
 
-                loss_value = float('+Inf')
-
+                training_loss_value = float('+Inf')
+                testing_loss_value = float('+Inf')
                 # Keep training until reach max iterations
-                while (step * self.batch_size < self.training_iters) and (loss_value > target_loss):
+                while (step * self.batch_size < self.training_iters) and (testing_loss_value > target_loss):
                     current_learning_rate = self.learning_rate
                     current_learning_rate *= 0.1 ** ((step * self.batch_size) // self.training_iter_step_down_every)
 
-                    _, batch_x, __, batch_y = generate_sample(self.dataFileTarget, f=None, t0=None, batch_size=self.batch_size, samples=self.n_steps,
+                    _, batch_x, __, batch_y = generate_sample(self.dataFileTarget, training=True, batch_size=self.batch_size, samples=self.n_steps,
                                                               predict=self.n_outputs)
-
                     batch_x = batch_x.reshape((self.batch_size, self.n_steps, self.n_input))
                     batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
 
@@ -91,13 +94,23 @@ class StackedLSTM:
                     sess.run(self.optimizer, feed_dict={self.x: batch_x, self.y: batch_y, self.lr: current_learning_rate})
                     if step % self.display_step == 0:
                         # Calculate batch loss
-                        loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
-                        print("Iter " + str(step * self.batch_size) + ", Minibatch Loss= " +
-                              "{:.6f}".format(loss_value))
+                        training_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
+
+                        # Run on test data
+                        _, batch_x, __, batch_y = generate_sample(self.dataFileTarget, training=False, batch_size=self.batch_size, samples=self.n_steps, predict=self.n_outputs)
+                        batch_x = batch_x.reshape((self.batch_size, self.n_steps, self.n_input))
+                        batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
+                        testing_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
+
+                        print("Iter " + str(step * self.batch_size) + ", Training Loss= " +
+                              "{:.6f} Testing loss= {:.6f}".format(training_loss_value, testing_loss_value))
                     step += 1
                 print("Optimization Finished!")
+                targetSavePath = "savedModels/"+self.modelName+"/"+self.modelName # need the underscore
+                if (not os.path.isdir(targetSavePath)):
+                    os.mkdir(targetSavePath)
+                save_path = saver.save(sess, targetSavePath)
 
-                save_path = saver.save(sess, "savedModels/model")
                 print("Saving to : " + save_path)
         else:
             print("*** stackedLSTM says: Network Parameters are not set or no dataFile target given.")
@@ -106,8 +119,8 @@ class StackedLSTM:
         # Test the prediction
 
         with tf.Session() as sess:
-            saver = tf.train.import_meta_graph("savedModels/"+targetModel+'.meta')
-            saver.restore(sess, tf.train.latest_checkpoint('savedModels/./'))
+            saver = tf.train.import_meta_graph('savedModels/'+targetModel+'/'+targetModel+'.meta')
+            saver.restore(sess, tf.train.latest_checkpoint('savedModels/'+ targetModel+'/./'))
             graph = tf.get_default_graph()
             self.pred = graph.get_tensor_by_name("pred:0")
             _x = graph.get_tensor_by_name("x:0")
@@ -118,11 +131,10 @@ class StackedLSTM:
             n_tests = 3
             for i in range(1, n_tests + 1):
                 plt.subplot(n_tests, 1, i)
-                t, y, next_t, expected_y = generate_sample(self.dataFileTarget, f=i, t0=True, samples=self.n_steps, predict=self.n_outputs)
-
+                t, y, next_t, expected_y = generate_sample(self.dataFileTarget,training=False, samples=self.n_steps, predict=self.n_outputs)
                 test_input = y.reshape((1, self.n_steps, self.n_input))
+                print("test: ", test_input)
                 prediction = sess.run(self.pred, feed_dict={_x: test_input})
-
                 # remove the batch size dimensions
                 t = t.squeeze()
                 y = y.squeeze()
@@ -146,7 +158,7 @@ class StackedLSTM:
             sess.run(init)
             for i in range(1, n_tests + 1):
                 plt.subplot(n_tests, 1, i)
-                t, y, next_t, expected_y = generate_sample(self.dataFileTarget, f=i, t0=True, samples=self.n_steps, predict=self.n_outputs)
+                t, y, next_t, expected_y = generate_sample(self.dataFileTarget, training=False, samples=self.n_steps, predict=self.n_outputs)
 
                 test_input = y.reshape((1, self.n_steps, self.n_input))
                 prediction = sess.run(self.pred, feed_dict={self.x: test_input})
@@ -160,8 +172,8 @@ class StackedLSTM:
                 plt.plot(t, y, color='black')
                 plt.plot(np.append(t[-1], next_t), np.append(y[-1], expected_y), color='green', linestyle=':')
                 plt.plot(np.append(t[-1], next_t), np.append(y[-1], prediction), color='red')
-                plt.ylim([0,0.6])
+                plt.ylim([-1,1])
                 plt.xlabel('time [t]')
-                plt.ylabel(self.dataFileTarget)
+                plt.ylabel('temp')
 
             plt.show()
