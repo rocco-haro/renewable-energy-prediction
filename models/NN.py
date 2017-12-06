@@ -9,12 +9,15 @@
 
 import tensorflow as tf
 import numpy as np
+import pandas as pd
+import random
+from pathlib import Path
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 
 RANDOM_SEED = 42
+LOG_DIR = 'LSTM_LOG/log_tb/MA10_30_50_EMA60_90'
 tf.set_random_seed(RANDOM_SEED)
-
 
 def init_weights(shape):
     """ Weight initialization """
@@ -30,80 +33,60 @@ def forwardprop(X, w_1, w_2):
     yhat = tf.matmul(h, w_2)  # The \varphi function
     return yhat
 
-def getDataBatchSizeOf(maxDataPoints, tag):
-    def getStartingPt(numOfPs):
-        starting = int(numOfPs * np.random.rand())
-        #print("numOfPs: ", numOfPs)
-        #print("starting: ", starting)
-        while (numOfPs - starting < maxDataPoints):
-
-
-            # TODO fix this back so that its random
-            starting = int(numOfPs *  np.random.rand())
-        return 1 #starting
-
+def getDataBatchSizeOf(numOfRows, tag):
     arrX = []
     arrY = []
-    counter = 0
-    #print("path: ", tag)
-    #print("Return number of :" +str(maxDataPoints))
-    with open('varyingData/state/state_powerGeneratedWindTurbine_'+tag, 'r') as readF:
-        for line in readF:
-            if counter == 0:
-                numOfPts = int(line)
-                counterStart = getStartingPt(numOfPts)
-                counter = 0
-            #    print("Max data pts: ", numOfPts)
-            #    print("Counter start: ", counterStart)
-            else:
 
-                if counter >= counterStart and (counter - counterStart) < maxDataPoints:
-                #    print("counter: " + str(counter))
-                    datas = line.split(',')
-                    arrX.append([float(x) for x in datas[1:]])
-                    arrY.append(int(datas[0]))
-                elif (counter - counterStart) >= maxDataPoints:
-                    break
-            counter+=1
+    trainLink = Path.cwd().parent.parent.joinpath('prod_Data/training_Data10.csv')
+    # trainLink2 = Path.cwd().parent.parent.joinpath('prod_Data/training_Data2.csv')
+    # testLink = Path.cwd().parent.parent.joinpath('prod_Data/testing_Data.csv')
 
-                #break
-    #print("Size: ", str(len(arr)))
-    # if len(arrX) != maxDataPoints:
-    #     arrX, arrY = getSingleSeriesDataOfSize(maxDataPoints, tag)
-    return np.array(arrX), np.array(list(arrY))
+    df = pd.read_csv(trainLink, index_col=0, skiprows=[1])
+    df.index = pd.to_datetime(df.index)
+
+    # Grab a random slice of size numOfRows
+    start = random.randrange(0, numOfRows)
+    while(start > df.shape[0]-numOfRows):
+        start = random.randrange(0, numOfRows)
+    end = start+numOfRows
+
+    arrX = df.ix[start:end,'temp':].values
+    arrY = df['power_output'][start:end].astype(int)
+
+    return np.array(arrX), np.array(arrY)
+
 def get_iris_data():
     """ Read the iris data set and split them into training and test sets """
-    iris   = datasets.load_iris()
-    data   = iris["data"]
-    target = iris["target"]
+    # iris   = datasets.load_iris()
+    # data   = iris["data"]
+    # target = iris["target"]
     data, target = getDataBatchSizeOf(288, 'TRAIN')
-    print("data: ", data)
-    print("target: ", target)
+    # print("data: ", data)
+    # print("target: ", target)
     #z = input()
     # Prepend the column of 1s for bias
     N, M  = data.shape
-    print("N: ", N)
-    print("M: ", M)
+    # print("N: ", N)
+    # print("M: ", M)
     all_X = np.ones((N, M + 1))
     all_X[:, 1:] = data
 
     # Convert into one-hot vectors
     num_labels = 49 # len(np.unique(target)) + 5 # TODO the number of labels NEEDS TO MATCH up to the maximum value returned...
-    print("Num labels: ",num_labels)
-    print("target shape: ", target.shape)
+    # print("Num labels: ",num_labels)
+    # print("target shape: ", target.shape)
     #print("[target] :", [target])
     all_Y = np.eye(num_labels)[target]  # One liner trick!
-    print("all_Y ", all_Y)
-    z=input()
-    return train_test_split(all_X, all_Y, test_size=0.5, random_state=RANDOM_SEED)
+    # print("all_Y ", all_Y)
+    return train_test_split(all_X, all_Y, test_size=0.2, random_state=RANDOM_SEED)
 
 def main():
     train_X, test_X, train_y, test_y = get_iris_data()
 
     # Layer's sizes
-    x_size = train_X.shape[1]   # Number of input nodes: 4 features and 1 bias
-    h_size = 256                # Number of hidden nodes
-    y_size = train_y.shape[1]   # Number of outcomes (3 iris flowers)
+    x_size = train_X.shape[1]   # Number of input nodes:    4 features and 1 bias
+    h_size = 256                # Number of hidden nodes    
+    y_size = train_y.shape[1]   # Number of outcomes        (3 iris flowers)
 
     # Symbols
     X = tf.placeholder("float", shape=[None, x_size])
@@ -126,8 +109,16 @@ def main():
     init = tf.global_variables_initializer()
     sess.run(init)
     test_accuracy = 0
+    ema_train_acc = 0
+    ema_test_acc = 0
     epoch = 0
-    while (test_accuracy < 0.75):
+
+    # Run Tensorboard
+    writer = tf.summary.FileWriter(LOG_DIR, sess.graph)
+    
+
+    while (ema_test_acc < 0.99):
+        train_X, test_X, train_y, test_y = get_iris_data()
         # Train with each example
         for i in range(len(train_X)):
             sess.run(updates, feed_dict={X: train_X[i: i + 1], y: train_y[i: i + 1]})
@@ -136,9 +127,18 @@ def main():
                                  sess.run(predict, feed_dict={X: train_X, y: train_y}))
         test_accuracy  = np.mean(np.argmax(test_y, axis=1) ==
                                  sess.run(predict, feed_dict={X: test_X, y: test_y}))
+        
+        ema_train_acc = ( (10*train_accuracy) + (ema_train_acc * 90) ) / 100
+        ema_test_acc = ( (10*test_accuracy) + (ema_test_acc * 90) ) / 100
 
-        print("Epoch = %d, train accuracy = %.2f%%, test accuracy = %.2f%%"
-              % (epoch + 1, 100. * train_accuracy, 100. * test_accuracy))
+        test_sum = tf.Summary(value=[tf.Summary.Value(tag="test_accuracy", simple_value=test_accuracy),])
+        writer.add_summary(test_sum, epoch)
+        #train_summ = tf.Summary(value=[tf.Summary.Value(tag="train_accuracy", simple_value=train_accuracy),])
+        #writer.add_summary(train_summ, epoch)
+        writer.flush()
+
+        print("Epoch = %d, train accuracy = %.2f%%, test accuracy = %.2f%% | %.2f%%"
+              % (epoch + 1, 100. * train_accuracy, 100. * test_accuracy, 100. * ema_test_acc))
         epoch+=1
     sess.close()
 
