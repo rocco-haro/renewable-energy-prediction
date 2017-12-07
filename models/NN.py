@@ -11,6 +11,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import random
+import os
 from pathlib import Path
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
@@ -18,17 +19,18 @@ from sklearn.model_selection import train_test_split
 RANDOM_SEED = 42
 tf.set_random_seed(RANDOM_SEED)
 
-class neuralNetwork:
-    def __init__(self, dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+class classicalNeuralNetwork:
+    def __init__(self,ID, dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+        self.ID = ID
         self.dataFileTarget = dataFileTarget
         self.LOG_DIR = LOG_DIR
         self.batchSize = batchSize
         self.hiddenSize = hiddenSize
         self.displaySteps = displaySteps
-
+        self.sess = None
         self.df = self.loadFile()
-        
-        self.train()
+
+    #    self.train()
 
     def loadFile(self):
         # File path to the input data
@@ -81,14 +83,14 @@ class neuralNetwork:
         all_X[:, 1:] = data
 
         # Convert into one-hot vectors
-        num_labels = 49 
+        num_labels = 49
         ############## num_labels = Number of unique power prediction numbers
-      
+
         # One liner trick!
-        all_Y = np.eye(num_labels)[target]  
+        all_Y = np.eye(num_labels)[target]
         return train_test_split(all_X, all_Y, test_size=0.2, random_state=RANDOM_SEED)
 
-    def train(self):
+    def train(self, targetAcc):
         train_X, test_X, train_y, test_y = self.get_data()
 
         # Layer's sizes
@@ -97,44 +99,44 @@ class neuralNetwork:
         y_size = train_y.shape[1]   # Number of outcomes
 
         # Symbols
-        X = tf.placeholder("float", shape=[None, x_size])
-        y = tf.placeholder("float", shape=[None, y_size])
+        self.X = tf.placeholder("float", shape=[None, x_size])
+        self.y = tf.placeholder("float", shape=[None, y_size])
 
         # Weight initializations
         w_1 = self.init_weights((x_size, h_size))
         w_2 = self.init_weights((h_size, y_size))
 
         # Forward propagation
-        yhat    = self.forwardprop(X, w_1, w_2)
-        predict = tf.argmax(yhat, axis=1)
+        yhat    = self.forwardprop(self.X, w_1, w_2)
+        self.predict = tf.argmax(yhat, axis=1)
 
         # Backward propagation
-        cost    = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=yhat))
+        cost    = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=yhat))
         updates = tf.train.GradientDescentOptimizer(0.07).minimize(cost)
 
         # Run SGD
-        sess = tf.Session()
+        self.sess = tf.Session()
         init = tf.global_variables_initializer()
-        sess.run(init)
+        self.sess.run(init)
         test_accuracy = 0
         ema_train_acc = 0
         ema_test_acc = 0
         epoch = 0
 
         # Run Tensorboard
-        writer = tf.summary.FileWriter(self.LOG_DIR, sess.graph)
-
-        while (ema_test_acc < 0.99):
+        writer = tf.summary.FileWriter(self.LOG_DIR, self.sess.graph)
+        saver = tf.train.Saver()
+        while (ema_test_acc < targetAcc):
             train_X, test_X, train_y, test_y = self.get_data()
             # Train with each example
             for i in range(len(train_X)):
-                sess.run(updates, feed_dict={X: train_X[i: i + 1], y: train_y[i: i + 1]})
+                self.sess.run(updates, feed_dict={self.X: train_X[i: i + 1], self.y: train_y[i: i + 1]})
 
             train_accuracy = np.mean(np.argmax(train_y, axis=1) ==
-                                     sess.run(predict, feed_dict={X: train_X, y: train_y}))
+                                     self.sess.run(self.predict, feed_dict={self.X: train_X, self.y: train_y}))
             test_accuracy  = np.mean(np.argmax(test_y, axis=1) ==
-                                     sess.run(predict, feed_dict={X: test_X, y: test_y}))
-            
+                                     self.sess.run(self.predict, feed_dict={self.X: test_X, self.y: test_y}))
+
             ema_train_acc = ( (10*train_accuracy) + (ema_train_acc * 90) ) / 100
             ema_test_acc = ( (10*test_accuracy) + (ema_test_acc * 90) ) / 100
 
@@ -144,9 +146,34 @@ class neuralNetwork:
             #writer.add_summary(train_summ, epoch)
             writer.flush()
 
-            print("Epoch = %d, train accuracy = %.2f%%, test accuracy = %.2f%% | %.2f%%"
+            print("Epoch = %d, train accuracy = %.2f%%, test accuracy = %.2f%%, movingAvgTestAcc =  %.2f%%"
                   % (epoch + 1, 100. * train_accuracy, 100. * test_accuracy, 100. * ema_test_acc))
             epoch+=1
-        sess.close()
+        # targetSavePath = "/savedModels"
+        # if (not os.path.isdir(targetSavePath)):
+        #     os.mkdir(targetSavePath)
+        # save_path = saver.save(sess, targetSavePath)
+        # print(save_path)
 
-neuralNetwork('training_Data.csv')
+        # Dangerous
+        #sess.close()
+
+    def closeSession(self):
+        self.sess.close()
+
+    def classifySetOf(self, feats):
+        # start a new session and run a classification with the already created model
+        # against the passes in feats
+        train_X, test_X, train_y, test_Y = self.get_data()
+        print("test_X: ", test_X[0])
+        print("test_Y: ", test_Y[0])
+
+        p = self.sess.run(self.predict, feed_dict={self.X: [feats], self.y: [test_Y[0]]})
+        print("argmax: ", np.argmax([test_Y[0]], axis=1))
+        val = np.mean(np.argmax([test_Y[0]], axis=1) == p)
+        print("val: ", val)
+        return p
+
+if __name__ == "__main__":
+    classicalNeuralNetwork('training_Data.csv')
+    classicalNeuralNetwork.closeSession()

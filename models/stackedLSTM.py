@@ -31,7 +31,11 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
+<<<<<<< HEAD
     def networkParams(self, ID, n_input = 1,n_steps = 20, n_hidden= 20, n_outputs = 5 , n_layers = 20, loading=False):
+=======
+    def networkParams(self,ID, n_input = 1,n_steps = 20, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
+>>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
         # Network Parameters
         self.ID = ID
         self.n_input = n_input # input is sin(x), a scalar
@@ -58,6 +62,7 @@ class StackedLSTM:
                 gru_cells = [rnn.GRUCell(n_hidden) for _ in range(n_layers)]
                 self.stacked_lstm = rnn.MultiRNNCell(gru_cells)
                 self.outputs, self.states = tf.nn.dynamic_rnn(self.stacked_lstm, inputs=self.x, dtype=tf.float32, time_major=False)
+<<<<<<< HEAD
 
                 h = tf.transpose(self.outputs, [1, 0, 2])
                 self.pred = tf.nn.bias_add(tf.matmul(h[-1], self.weights['out']), self.biases['out'], name="pred")
@@ -141,6 +146,18 @@ class StackedLSTM:
         # print("FT: ", FT)
         # print("FY: ", FY)
         return T, Y, FT, FY
+=======
+
+                h = tf.transpose(self.outputs, [1, 0, 2])
+                self.pred = tf.nn.bias_add(tf.matmul(h[-1], self.weights['out']), self.biases['out'], name="pred")
+
+                # Define loss (Euclidean distance) and optimizer
+                individual_losses = tf.reduce_sum(tf.squared_difference(self.pred, self.y), reduction_indices=1)
+                self.loss = tf.reduce_mean(individual_losses)
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss)
+
+                self.NetworkParametersSet = True
+>>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
 
     def train(self, target_loss=0.005):
         if (self.NetworkParametersSet and self.dataFrame is not None):
@@ -181,10 +198,10 @@ class StackedLSTM:
                               "{:.6f} Testing loss= {:.6f}".format(training_loss_value, testing_loss_value))
                     step += 1
                 print("Optimization Finished!")
-                targetSavePath = "savedModels/"+self.modelName+"/"+self.modelName # need the underscore
+                targetSavePath = "models/savedModels/"+self.modelName #+"/"+self.modelName # need the underscore
                 if (not os.path.isdir(targetSavePath)):
                     os.mkdir(targetSavePath)
-                save_path = saver.save(sess, targetSavePath)
+                save_path = saver.save(sess, targetSavePath+"/"+self.modelName)
 
                 print("Saving to : " + save_path)
         else:
@@ -222,6 +239,35 @@ class StackedLSTM:
                 plt.ylim([0,0.6])
                 plt.xlabel('time [t]')
                 plt.ylabel(self.dataFileTarget)
+
+            plt.show()
+
+    def forecastGiven(self, lookBackData):
+        init = tf.global_variables_initializer()
+        n_tests = 1
+        with tf.Session() as sess:
+            sess.run(init)
+            for i in range(1, n_tests + 1):
+                plt.subplot(n_tests, 1, i)
+                t, y, next_t, expected_y = generate_sample(self.dataFileTarget, training=False, samples=self.n_steps, predict=self.n_outputs)
+
+                test_input = y.reshape((1, self.n_steps, self.n_input))
+            #    print("test_input: ", test_input)
+                prediction = sess.run(self.pred, feed_dict={self.x: lookBackData})
+            #    print("prediction: ", prediction)
+                return prediction
+                # remove the batch size dimensions
+                t = t.squeeze()
+                y = y.squeeze()
+                next_t = next_t.squeeze()
+                prediction = prediction.squeeze()
+
+                plt.plot(t, y, color='black')
+                plt.plot(np.append(t[-1], next_t), np.append(y[-1], expected_y), color='green', linestyle=':')
+                plt.plot(np.append(t[-1], next_t), np.append(y[-1], prediction), color='red')
+                plt.ylim([-1,1])
+                plt.xlabel('time [t]')
+                plt.ylabel('temp')
 
             plt.show()
 
