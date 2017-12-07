@@ -97,7 +97,7 @@ class renewableModel:
         # thread each model for training
         # continue training until NN > 95%
         NN_targetAcc = 0.70
-        #self.NN.train(NN_targetAcc)
+        self.NN.train(NN_targetAcc)
         # and loss over all feature models are satisfactory
 
 
@@ -113,8 +113,8 @@ class renewableModel:
     def config(self):
         # initialize the NN
             # selecting network parameters?
-    #    trainingDataPath = "training_Data12.csv" # 12 is the most recent data with richer features (EMA)
-    #    self.NN = NN.classicalNeuralNetwork(self.id, trainingDataPath) # configure options for NN ==  dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+        trainingDataPath = self.dataFileTarget # 12 is the most recent data with richer features (EMA)
+        self.NN = NN.classicalNeuralNetwork(self.id, trainingDataPath) # configure options for NN ==  dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
         x = dict()
         x['temp'] = "temperature"
         x['hum'] = " asdf "
