@@ -1,0 +1,11 @@
+go to supermodel.py  in line 325 - observe the note for graphing. 
+
+Revview lines 345 -- 356 in supermodel.py to understand what values are being written 
+into the superModelresults_<exp_num> 
+
+the values in the actual_Y.csv are what actually happened, so compare the values in 
+actual_Y.csv against those of the superModelresults_ blah blah blah
+
+More helpful info is in stackedLSTM.py in line 245
+
+I'll prolly be sleeping when you read this, best of luck soldier

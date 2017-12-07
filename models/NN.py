@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import random
 import os
+import time
 from pathlib import Path
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
@@ -34,7 +35,9 @@ class classicalNeuralNetwork:
 
     def loadFile(self):
         # File path to the input data
-        trainLink = Path.cwd().parent.parent.joinpath(str('470 Capstone/renewable-energy-prediction/' + self.dataFileTarget))
+        path = '470 Capstone/renewable-energy-prediction/' + str(self.dataFileTarget)
+        print(path)
+        trainLink = Path.cwd().parent.parent.joinpath(path)
 
         # Load all data into dataframe
         df = pd.read_csv(trainLink, index_col=0, skiprows=[1])
@@ -88,6 +91,7 @@ class classicalNeuralNetwork:
 
         # One liner trick!
         all_Y = np.eye(num_labels)[target]
+    #    time.sleep(0.1)
         return train_test_split(all_X, all_Y, test_size=0.2, random_state=RANDOM_SEED)
 
     def train(self, targetAcc):
@@ -131,7 +135,7 @@ class classicalNeuralNetwork:
             # Train with each example
             for i in range(len(train_X)):
                 self.sess.run(updates, feed_dict={self.X: train_X[i: i + 1], self.y: train_y[i: i + 1]})
-
+            #sprint(train_y[0])
             train_accuracy = np.mean(np.argmax(train_y, axis=1) ==
                                      self.sess.run(self.predict, feed_dict={self.X: train_X, self.y: train_y}))
             test_accuracy  = np.mean(np.argmax(test_y, axis=1) ==
@@ -175,5 +179,5 @@ class classicalNeuralNetwork:
         return p
 
 if __name__ == "__main__":
-    classicalNeuralNetwork('training_Data.csv')
+    classicalNeuralNetwork('prod_Data/training_Data.csv')
     classicalNeuralNetwork.closeSession()
