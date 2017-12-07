@@ -2,12 +2,9 @@
 # the supermodel class abstracts renewable models for one particular town
 
 import models.stackedLSTM as modelBuilder_LSTM
-<<<<<<< HEAD
 import pandas as pd
-=======
 import models.NN as NN
 
->>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
 class renewableModel:
     def __init__(self, _id, dataFileTarget):
         self.id = _id
@@ -18,7 +15,6 @@ class renewableModel:
         self.dataFrame = self.loadData()
         self.config()
 
-<<<<<<< HEAD
     def loadData(self):
         # Pull all data from CSV file and
         # push into a dataframe for portability.
@@ -28,12 +24,10 @@ class renewableModel:
 
         return df
 
-=======
     def getNumOfFeats(self):
         # TODO TODO TODO TODO
         # return the number of features in the data
         return 2
->>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
 
     def masterTest(self):
         # for n number of test:
@@ -73,11 +67,6 @@ class renewableModel:
 
 
 
-
-
-
-
-
           # answer should be 13 for the above
 
         #try:
@@ -110,12 +99,7 @@ class renewableModel:
         NN_targetAcc = 0.70
         #self.NN.train(NN_targetAcc)
         # and loss over all feature models are satisfactory
-<<<<<<< HEAD
-        self.LSTM_Models[1].train()
 
-        # single model testing, not super model testing as that is done in masterTest
-        self.LSTM_Models[1].test()
-=======
 
         if (True):
             for i in range(self.getNumOfFeats()):
@@ -124,7 +108,6 @@ class renewableModel:
             # single model testing, not super model testing as that is done in masterTest
         #    self.LSTM_Models[0].test()
 
->>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
         self.masterTest()
 
     def config(self):
@@ -138,7 +121,6 @@ class renewableModel:
 
         # initialize the LSTMS
             # couont how many features there are
-<<<<<<< HEAD
 
         for column in self.dataFrame:
             if column != "power_output":
