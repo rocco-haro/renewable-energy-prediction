@@ -5,7 +5,7 @@ Inspired by https://github.com/aymericdamien/TensorFlow-Examples/ and http://mou
 
 from __future__ import print_function
 
-from generate_sample import generate_sample
+from models.generate_sample import generate_sample
 
 import numpy as np
 import matplotlib.pyplot as plt

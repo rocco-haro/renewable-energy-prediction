@@ -1,7 +1,10 @@
 # Controller for data processing and LSTM Control
 
-from LSTM.control_LSTM import control_LSTM as lstmCtrl
+#from LSTM.control_LSTM import control_LSTM as lstmCtrl
 #from LSTM.LSTM_Model import LSTM_Model
+
+import models.superModel as sm
+
 class mainCtrl():
     def __init__(self, *args):
         self.familyMember = dict() # holds a family of LSTMs
@@ -89,4 +92,5 @@ def run():
             break
 
 if __name__ == "__main__":
-    run()
+    numOfRenewables = 1
+    town = sm.superModel(numOfRenewables)
