@@ -34,7 +34,7 @@ class classicalNeuralNetwork:
 
     def loadFile(self):
         # File path to the input data
-        trainLink = Path.cwd().parent.parent.joinpath(str('prod_Data/' + self.dataFileTarget))
+        trainLink = Path.cwd().parent.parent.joinpath(str('470 Capstone/renewable-energy-prediction/' + self.dataFileTarget))
 
         # Load all data into dataframe
         df = pd.read_csv(trainLink, index_col=0, skiprows=[1])
