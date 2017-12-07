@@ -1,0 +1,2 @@
+model_checkpoint_path: "temperature"
+all_model_checkpoint_paths: "temperature"

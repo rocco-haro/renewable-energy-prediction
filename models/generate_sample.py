@@ -38,7 +38,7 @@ def getSingleSeriesDataOfSize(maxDataPoints, tag, fileTarget):
         arr = getSingleSeriesDataOfSize(maxDataPoints, tag, fileTarget)
     return arr
 
-def generate_sample(fileTarget="",f: Optional[float] = 1.0, t0: Optional[float] = None, batch_size: int = 1,
+def generate_sample(fileTarget="", training: Optional[bool] = None, batch_size: int = 1,
                     predict: int = 50, samples: int = 100) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generates data samples.
@@ -58,10 +58,10 @@ def generate_sample(fileTarget="",f: Optional[float] = 1.0, t0: Optional[float] 
     FT = np.empty((batch_size, predict))
     FY = np.empty((batch_size, predict))
 
-    _t0 = t0
+    _t0 = training
     for i in range(batch_size):
         t = np.arange(0, samples + predict)
-        if _t0 is None:
+        if _t0 is True:
         #     t0 = np.random.rand() * 2 * np.pi
         # else:
         #     t0 = _t0 + i/float(batch_size)
