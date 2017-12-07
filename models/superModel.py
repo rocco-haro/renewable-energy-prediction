@@ -2,19 +2,38 @@
 # the supermodel class abstracts renewable models for one particular town
 
 import models.stackedLSTM as modelBuilder_LSTM
+<<<<<<< HEAD
+import pandas as pd
+=======
 import models.NN as NN
 
+>>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
 class renewableModel:
-    def __init__(self, _id):
+    def __init__(self, _id, dataFileTarget):
         self.id = _id
         self.NN = None
         self.LSTM_Models = []
+
+        self.dataFileTarget = dataFileTarget
+        self.dataFrame = self.loadData()
         self.config()
 
+<<<<<<< HEAD
+    def loadData(self):
+        # Pull all data from CSV file and
+        # push into a dataframe for portability.
+
+        df = pd.read_csv(self.dataFileTarget, index_col=0, skiprows=[1])
+        df.index = pd.to_datetime(df.index)
+
+        return df
+
+=======
     def getNumOfFeats(self):
         # TODO TODO TODO TODO
         # return the number of features in the data
         return 2
+>>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
 
     def masterTest(self):
         # for n number of test:
@@ -91,6 +110,12 @@ class renewableModel:
         NN_targetAcc = 0.70
         #self.NN.train(NN_targetAcc)
         # and loss over all feature models are satisfactory
+<<<<<<< HEAD
+        self.LSTM_Models[1].train()
+
+        # single model testing, not super model testing as that is done in masterTest
+        self.LSTM_Models[1].test()
+=======
 
         if (True):
             for i in range(self.getNumOfFeats()):
@@ -99,6 +124,7 @@ class renewableModel:
             # single model testing, not super model testing as that is done in masterTest
         #    self.LSTM_Models[0].test()
 
+>>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
         self.masterTest()
 
     def config(self):
@@ -112,11 +138,23 @@ class renewableModel:
 
         # initialize the LSTMS
             # couont how many features there are
+<<<<<<< HEAD
+
+        for column in self.dataFrame:
+            if column != "power_output":
+                curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=column)
+                curr_lstm.networkParams(column) # can pass in custom configurations Note: necessary to call this function
+                self.LSTM_Models.append(curr_lstm)
+
+       # curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFileTarget='models/varyingData/moving/temperature', modelName="temperature")
+
+=======
         numOfFeats = self.getNumOfFeats()
         for i in range(numOfFeats):
             curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFileTarget='models/varyingData/moving/temperature'+str(i), modelName="temperature"+str(i))
             curr_lstm.networkParams(i) # can pass in custom configurations Note: necessary to call this function
             self.LSTM_Models.append(curr_lstm)
+>>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
         # for each F in len(features):
             # create lstm model for each feature
 
@@ -134,7 +172,7 @@ class superModel:
     def __init__(self, numOfRenewables):
         self.renewableModels = []
         for i in range(numOfRenewables):
-            self.renewableModels.append(renewableModel(i))
+            self.renewableModels.append(renewableModel(i, "models/varyingData/moving/newDataWithTemporalsTEST2.csv"))
 
         self.renewableModels[0].printID()
 

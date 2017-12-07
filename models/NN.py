@@ -57,13 +57,14 @@ class classicalNeuralNetwork:
         return yhat
 
     def getOneBatch(self):
+        numRows = self.df.shape[0]
         arrX = []
         arrY = []
 
         # Randomly select a day
-        start = random.randrange(0, self.batchSize)
-        while(start > self.df.shape[0] - self.batchSize):   # Out of bounds exception
-            start = random.randrange(0, self.batchSize)
+        start = random.randrange(0, numRows)
+        while(start > numRows - self.batchSize):   # Out of bounds exception
+            start = random.randrange(0, numRows)
         end = start + self.batchSize
 
         # Pull the day's data

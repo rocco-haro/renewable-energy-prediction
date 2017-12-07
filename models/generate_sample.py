@@ -36,6 +36,9 @@ def getSingleSeriesDataOfSize(maxDataPoints, tag, fileTarget):
     #print("Size: ", str(len(arr)))
     if len(arr) != maxDataPoints:
         arr = getSingleSeriesDataOfSize(maxDataPoints, tag, fileTarget)
+    print(type(arr))
+    print(arr)
+    print(len(arr))
     return arr
 
 def generate_sample(fileTarget="", training: Optional[bool] = None, batch_size: int = 1,
@@ -99,7 +102,7 @@ if __name__ == '__main__':
     # noinspection PyUnresolvedReferences
     import seaborn as sns
 
-    t, y, t_next, y_next = generate_sample(f=None, t0=None, batch_size=1, samples=300, predict=200)
+    t, y, t_next, y_next = generate_sample("varyingData/moving/temperature", True)#, batch_size=1, samples=300, predict=200)
 
     n_tests = t.shape[0]
     for i in range(0, n_tests):
