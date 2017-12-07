@@ -16,7 +16,7 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 
 RANDOM_SEED = 42
-LOG_DIR = 'LSTM_LOG/log_tb/MA10_30_50_EMA60_90'
+LOG_DIR = 'LSTM_LOG/log_tb/MA10_30_50_EMA30_60_90'
 tf.set_random_seed(RANDOM_SEED)
 
 def init_weights(shape):
@@ -37,7 +37,7 @@ def getDataBatchSizeOf(numOfRows, tag):
     arrX = []
     arrY = []
 
-    trainLink = Path.cwd().parent.parent.joinpath('prod_Data/training_Data10.csv')
+    trainLink = Path.cwd().parent.parent.joinpath('prod_Data/training_Data12.csv')
     # trainLink2 = Path.cwd().parent.parent.joinpath('prod_Data/training_Data2.csv')
     # testLink = Path.cwd().parent.parent.joinpath('prod_Data/testing_Data.csv')
 
