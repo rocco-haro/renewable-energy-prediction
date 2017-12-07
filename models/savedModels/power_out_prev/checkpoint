@@ -1,0 +1,2 @@
+model_checkpoint_path: "power_out_prev"
+all_model_checkpoint_paths: "power_out_prev"

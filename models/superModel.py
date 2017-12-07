@@ -10,7 +10,7 @@ class renewableModel:
         self.id = _id
         self.NN = None
         self.LSTM_Models = []
-
+        self.countFeats = 0
         self.dataFileTarget = dataFileTarget
         self.dataFrame = self.loadData()
         self.config()
@@ -27,7 +27,7 @@ class renewableModel:
     def getNumOfFeats(self):
         # TODO TODO TODO TODO
         # return the number of features in the data
-        return 2
+        return self.countFeats
 
     def masterTest(self):
         # for n number of test:
@@ -113,8 +113,8 @@ class renewableModel:
     def config(self):
         # initialize the NN
             # selecting network parameters?
-        trainingDataPath = "training_Data12.csv" # 12 is the most recent data with richer features (EMA)
-        self.NN = NN.classicalNeuralNetwork(self.id, trainingDataPath) # configure options for NN ==  dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+    #    trainingDataPath = "training_Data12.csv" # 12 is the most recent data with richer features (EMA)
+    #    self.NN = NN.classicalNeuralNetwork(self.id, trainingDataPath) # configure options for NN ==  dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
         x = dict()
         x['temp'] = "temperature"
         x['hum'] = " asdf "
@@ -123,20 +123,15 @@ class renewableModel:
             # couont how many features there are
 
         for column in self.dataFrame:
-            if column != "power_output":
+
+            if column != "power_output": # TODO maybe don't include moving averages
+                self.countFeats+=1
                 curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=column)
                 curr_lstm.networkParams(column) # can pass in custom configurations Note: necessary to call this function
                 self.LSTM_Models.append(curr_lstm)
 
        # curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFileTarget='models/varyingData/moving/temperature', modelName="temperature")
 
-=======
-        numOfFeats = self.getNumOfFeats()
-        for i in range(numOfFeats):
-            curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFileTarget='models/varyingData/moving/temperature'+str(i), modelName="temperature"+str(i))
-            curr_lstm.networkParams(i) # can pass in custom configurations Note: necessary to call this function
-            self.LSTM_Models.append(curr_lstm)
->>>>>>> 51f3ab719f3bc8fa30301696e4d1f6e2c8f143e3
         # for each F in len(features):
             # create lstm model for each feature
 
@@ -154,7 +149,7 @@ class superModel:
     def __init__(self, numOfRenewables):
         self.renewableModels = []
         for i in range(numOfRenewables):
-            self.renewableModels.append(renewableModel(i, "models/varyingData/moving/newDataWithTemporalsTEST2.csv"))
+            self.renewableModels.append(renewableModel(i, "prod_Data/training_Data12.csv"))
 
         self.renewableModels[0].printID()
 
