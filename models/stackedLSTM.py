@@ -31,11 +31,8 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
-<<<<<<< HEAD
-    def networkParams(self, ID, n_input = 1,n_steps = 20, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
-=======
+
     def networkParams(self,ID, n_input = 1,n_steps = 20, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
->>>>>>> 1cf3c0c7fd1c29584aa3a8693169cd7d2533ee4e
         # Network Parameters
         self.ID = ID
         self.n_input = n_input # input is sin(x), a scalar
@@ -145,10 +142,6 @@ class StackedLSTM:
         # print("FT: ", FT)
         # print("FY: ", FY)
         return T, Y, FT, FY
-<<<<<<< HEAD
-=======
-
->>>>>>> 1cf3c0c7fd1c29584aa3a8693169cd7d2533ee4e
 
     def train(self, target_loss=0.005):
         if (self.NetworkParametersSet and self.dataFrame is not None):

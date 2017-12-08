@@ -65,8 +65,6 @@ class renewableModel:
         print("features_forecasts:", features_forecasts)
         forecasted_Power = []
 
-
-
           # answer should be 13 for the above
 
         #try:
@@ -100,13 +98,12 @@ class renewableModel:
         self.NN.train(NN_targetAcc)
         # and loss over all feature models are satisfactory
 
-
         if (True):
             for i in range(self.getNumOfFeats()):
                 self.LSTM_Models[i].train(target_loss = 0.5)
 
             # single model testing, not super model testing as that is done in masterTest
-        #    self.LSTM_Models[0].test()
+            # self.LSTM_Models[0].test()
 
         self.masterTest()
 

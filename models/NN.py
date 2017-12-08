@@ -30,13 +30,14 @@ class classicalNeuralNetwork:
         self.sess = None
         self.df = self.loadFile()
 
-    #    self.train()
+        #self.train()
 
     def loadFile(self):
         # File path to the input data
         trainLink = Path.cwd().parent.parent.joinpath(str('470 Capstone/renewable-energy-prediction/' + self.dataFileTarget))
 
         # Load all data into dataframe
+        print(trainLink)
         df = pd.read_csv(trainLink, index_col=0, skiprows=[1])
         df.index = pd.to_datetime(df.index)
 
@@ -175,5 +176,5 @@ class classicalNeuralNetwork:
         return p
 
 if __name__ == "__main__":
-    classicalNeuralNetwork('training_Data.csv')
+    classicalNeuralNetwork('prod_Data/training_Data12.csv')
     classicalNeuralNetwork.closeSession()
