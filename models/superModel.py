@@ -13,6 +13,7 @@ class renewableModel:
         self.LSTM_Models = []
         self.countFeats = 0
         self.dataFileTarget = dataFileTarget
+        self.renewableModel_Test_accuracy = 0
         self.dataFrame = self.loadData()
         self.config()
 
@@ -307,6 +308,9 @@ Label : Feats<>
 
 
             ]
+
+
+
         numOfFeats = self.getNumOfFeats()
         for i in range(numOfFeats):
             # TODO get unique look back for each feature from the same timesteps
@@ -333,15 +337,22 @@ Label : Feats<>
                 # curr_forecast = formatFeatureSet(feat_forecast, timestep)
         print("features_forecasts:", features_forecasts)
         forecasted_Power = []
+
+        # w/ lstm configuration of : def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
         # 1 - .20 % NN, .5 loss LStm
         # 2 - 0.90 % NN, 0.01 loss LSTM
+
+        # w/ lstm configuration of :     def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
+
         # 3 - 0.95 % NN, 0.001 loss LSTM
-        num = 3
+        # 4 - 0.97 % NN, 0.0001 loss lstm
+        num = 4
 
         with open('superModel_Results_'+str(num), 'w') as csvFile:
             wr = csv.writer(csvFile, delimiter=",")
 
-
+            renewableModel_Test_accuracy_MA = self.renewableModel_Test_accuracy
+            # while renewableModel_Test_accuracy_MA < 0.50
 
             for timestep in range(5):
                 currFeatsInTimestep = []
@@ -390,7 +401,7 @@ Label : Feats<>
     def train(self):
         # thread each model for training
         # continue training until NN > 95%
-        NN_targetAcc = 0.95
+        NN_targetAcc = 0.97
         #try:
         self.NN.train(NN_targetAcc)
         #except:
@@ -399,7 +410,7 @@ Label : Feats<>
 
 
         for i in range(self.getNumOfFeats()):
-            self.LSTM_Models[i].train(target_loss = 0.001)
+            self.LSTM_Models[i].train(target_loss = 0.0001)
 
             # single model testing, not super model testing as that is done in masterTest
         #    self.LSTM_Models[0].test()

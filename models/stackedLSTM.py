@@ -17,7 +17,7 @@ from tensorflow.contrib import rnn
 from typing import Optional, Tuple
 
 class StackedLSTM:
-    def __init__(self, dataFrame=None, modelName="_Unnamed!", learning_rate=0.00025, training_iters=1000000, training_iter_step_down_every=250000, batch_size=40, display_step=100):
+    def __init__(self, dataFrame=None, modelName="_Unnamed!", learning_rate=0.00025, training_iters=1000000, training_iter_step_down_every=2500000, batch_size=40, display_step=100):
         """ dataFileTarget="",modelName, learning_rate=0.005,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 10 , display_step = 100
         """
         #self.dataFileTarget = dataFileTarget
@@ -31,7 +31,7 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
-    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
+    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
         # Network Parameters
         self.ID = ID
         self.n_input = n_input # input is sin(x), a scalar
