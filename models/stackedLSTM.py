@@ -31,8 +31,7 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
-
-    def networkParams(self,ID, n_input = 1,n_steps = 20, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
+    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
         # Network Parameters
         self.ID = ID
         self.n_input = n_input # input is sin(x), a scalar
@@ -233,27 +232,33 @@ class StackedLSTM:
             sess.run(init)
             for i in range(1, n_tests + 1):
                 plt.subplot(n_tests, 1, i)
-                t, y, next_t, expected_y = generate_sample(self.dataFileTarget, training=False, samples=self.n_steps, predict=self.n_outputs)
-
-                test_input = y.reshape((1, self.n_steps, self.n_input))
+                t, y, next_t, expected_y = self.generateSubset(training=False, batch_size=self.batch_size, samples=self.n_steps, predict=self.n_outputs)
+            #    print(y.shape)
+                #test_input = y.reshape((1, self.n_steps, self.n_input))
             #    print("test_input: ", test_input)
                 prediction = sess.run(self.pred, feed_dict={self.x: lookBackData})
             #    print("prediction: ", prediction)
                 return prediction
                 # remove the batch size dimensions
+
+                #NOTE shtuff under here makes the perty graphs
+
+
+
                 t = t.squeeze()
-                y = y.squeeze()
+                #y = y.squeeze()
                 next_t = next_t.squeeze()
                 prediction = prediction.squeeze()
 
-                plt.plot(t, y, color='black')
-                plt.plot(np.append(t[-1], next_t), np.append(y[-1], expected_y), color='green', linestyle=':')
-                plt.plot(np.append(t[-1], next_t), np.append(y[-1], prediction), color='red')
+                plt.plot(t, y, color='black') # this is the lookBackData
+                plt.plot(np.append(t[-1], next_t), np.append(y[-1], expected_y), color='green', linestyle=':') #this is the actual_Y.csv data
+                plt.plot(np.append(t[-1], next_t), np.append(y[-1], prediction), color='red') # this is the superModel_Results_1.csv
                 plt.ylim([-1,1])
                 plt.xlabel('time [t]')
                 plt.ylabel('temp')
 
             plt.show()
+
 
     def test(self, n_tests=3):
         # Test the prediction
