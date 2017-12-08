@@ -32,11 +32,8 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
-<<<<<<< HEAD
     def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
-=======
-    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False):
->>>>>>> 3d4bf04200ca1107096a88d9de0e00c80a29ab10
+
         # Network Parameters
         self.ID = ID
         self.n_input = n_input # input is sin(x), a scalar
@@ -145,7 +142,7 @@ class StackedLSTM:
 
             # add ops to save and restore all variables
             saver = tf.train.Saver()
-            
+
             # Launch the graph
             with tf.Session() as sess:
                 sess.run(init)
