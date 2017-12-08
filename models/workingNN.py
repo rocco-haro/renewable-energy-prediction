@@ -19,7 +19,7 @@ RANDOM_SEED = 42
 tf.set_random_seed(RANDOM_SEED)
 
 class neuralNetwork:
-    def __init__(self,ID, dataFileTarget, LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+    def __init__(self,ID, dataFileTarget, LOG_DIR="NN_LOG/temp", batchSize=144, hiddenSize=256, displaySteps=20):
         self.ID  = ID
         self.dataFileTarget = dataFileTarget
         self.LOG_DIR = LOG_DIR
@@ -33,7 +33,7 @@ class neuralNetwork:
 
     def loadFile(self):
         # File path to the input data
-        trainLink = Path.cwd().parent.parent.joinpath(str(self.dataFileTarget))
+        trainLink = Path.cwd().joinpath(str(self.dataFileTarget))
 
         # Load all data into dataframe
         df = pd.read_csv(trainLink, index_col=0, skiprows=[1], encoding='utf-8', engine='python')

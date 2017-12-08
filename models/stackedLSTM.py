@@ -20,7 +20,8 @@ class StackedLSTM:
     def __init__(self, dataFrame=None, modelName="_Unnamed!", learning_rate=0.00025, training_iters=1000000, training_iter_step_down_every=250000, batch_size=40, display_step=100):
         """ dataFileTarget="",modelName, learning_rate=0.005,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 10 , display_step = 100
         """
-        #self.dataFileTarget = dataFileTarget
+        # self.dataFileTarget = dataFileTarget
+        self.LOG_DIR = "LSTM_LOG/"+str(modelName)
         self.dataFrame = dataFrame
         self.modelName = modelName
         self.learning_rate = learning_rate
@@ -31,7 +32,7 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
-    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
+    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False):
         # Network Parameters
         self.ID = ID
         self.n_input = n_input # input is sin(x), a scalar
@@ -88,7 +89,6 @@ class StackedLSTM:
         return arr
 
     def generateSubset(self, training: Optional[bool] = None, batch_size: int = 1, predict: int = 50, samples: int = 100) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-
         """
         Generates data samples.
 
@@ -110,18 +110,10 @@ class StackedLSTM:
         _t0 = training
         for i in range(batch_size):
             t = np.arange(0, samples + predict)
-            if _t0 is True:
-            #     t0 = np.random.rand() * 2 * np.pi
-            # else:
-            #     t0 = _t0 + i/float(batch_size)
-            #
-            # freq = f
-            # if freq is None:
-            #     freq = np.random.rand() * 3.5 + 0.5
 
+            if _t0 is True:
                 y = np.array(self.getDataOfSize(predict+samples)) # np.sin(2 * np.pi * freq * (t + t0))
-            #    print(np.shape(y))
-            #    z = input()
+
                 T[i, :] = t[0:samples]
                 Y[i, :] = y[0:samples]
 
@@ -149,6 +141,7 @@ class StackedLSTM:
 
             # add ops to save and restore all variables
             saver = tf.train.Saver()
+            
             # Launch the graph
             with tf.Session() as sess:
                 sess.run(init)
@@ -156,6 +149,10 @@ class StackedLSTM:
 
                 training_loss_value = float('+Inf')
                 testing_loss_value = float('+Inf')
+
+                # Writes tensorboard logs
+                writer = tf.summary.FileWriter(self.LOG_DIR, sess.graph)
+
                 # Keep training until reach max iterations
                 while (step * self.batch_size < self.training_iters) and (testing_loss_value > target_loss):
                     current_learning_rate = self.learning_rate
@@ -176,6 +173,17 @@ class StackedLSTM:
                         batch_x = batch_x.reshape((self.batch_size, self.n_steps, self.n_input))
                         batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
                         testing_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
+
+                        # Values to be written to tensorboard graphs
+                        #train_sum = tf.Summary(value=[tf.Summary.Value(tag="Training Loss Value", simple_value=training_loss_value),])
+                        test_sum = tf.Summary(value=[tf.Summary.Value(tag="Training Loss Value", simple_value=testing_loss_value),])
+
+                        # Create placeholders for tensorboard values
+                        #writer.add_summary(train_sum, step)
+                        writer.add_summary(test_sum, step)
+
+                        # Write values to tensorboard
+                        writer.flush()
 
                         print("Iter " + str(step * self.batch_size) + ", Training Loss= " +
                               "{:.6f} Testing loss= {:.6f}".format(training_loss_value, testing_loss_value))
@@ -242,8 +250,6 @@ class StackedLSTM:
                 # remove the batch size dimensions
 
                 #NOTE shtuff under here makes the perty graphs
-
-
 
                 t = t.squeeze()
                 #y = y.squeeze()

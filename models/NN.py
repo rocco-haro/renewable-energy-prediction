@@ -21,7 +21,7 @@ RANDOM_SEED = 42
 tf.set_random_seed(RANDOM_SEED)
 
 class classicalNeuralNetwork:
-    def __init__(self,ID, dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+    def __init__(self,ID, dataFileTarget="", LOG_DIR="NN_LOG/temp", batchSize=144, hiddenSize=256, displaySteps=20):
         self.ID = ID
         self.dataFileTarget = dataFileTarget
         self.LOG_DIR = LOG_DIR
@@ -37,10 +37,10 @@ class classicalNeuralNetwork:
         # File path to the input data
         path = '470 Capstone/renewable-energy-prediction/' + str(self.dataFileTarget)
         print(path)
-        trainLink = Path.cwd().parent.parent.joinpath(path)
+        trainLink = Path.cwd().joinpath(path)
+        print(trainLink)
 
         # Load all data into dataframe
-        print(trainLink)
         df = pd.read_csv(trainLink, index_col=0, skiprows=[1])
         df.index = pd.to_datetime(df.index)
 
