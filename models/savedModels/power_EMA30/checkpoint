@@ -1,0 +1,2 @@
+model_checkpoint_path: "power_EMA30"
+all_model_checkpoint_paths: "power_EMA30"
