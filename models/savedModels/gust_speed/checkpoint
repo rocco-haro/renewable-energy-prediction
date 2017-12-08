@@ -1,0 +1,2 @@
+model_checkpoint_path: "gust_speed"
+all_model_checkpoint_paths: "gust_speed"

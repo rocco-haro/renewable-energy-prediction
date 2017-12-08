@@ -5,6 +5,9 @@ import models.stackedLSTM as modelBuilder_LSTM
 import pandas as pd
 import models.workingNN as NN
 import csv
+import math
+import matplotlib.pyplot as plt
+import numpy as np
 
 class renewableModel:
     def __init__(self, _id, dataFileTarget):
@@ -14,6 +17,7 @@ class renewableModel:
         self.countFeats = 0
         self.dataFileTarget = dataFileTarget
         self.renewableModel_Test_accuracy = 0
+        self.reTrainLSTM = False
         self.dataFrame = self.loadData()
         self.config()
 
@@ -306,104 +310,126 @@ class renewableModel:
             [0.4313337481]]
             ]
 
+        numTests = 1
+        masterTest_Accuracy_Avg = 0
+        for k in range(numTests):
+            numOfFeats = self.getNumOfFeats()
+            for i in range(numOfFeats):
+                # TODO get unique look back for each feature from the same timesteps
+                # lookBackData = [[[-0.34587266],
+                #     [-0.34637179],
+                #     [-0.34822873],
+                #     [-0.35029343],
+                #     [-0.3497669 ],
+                #     [-0.35025731],
+                #     [-0.35231279],
+                #     [-0.35329935],
+                #     [-0.35478794],
+                #     [-0.35399758]]]
+                lookBackData = killme[i]
+                # TODO
+                # NOTE: You can modify the codde in the forecastGiven
+                # and add in the actual_Y.csv so that you can draw a graph
+                # of the accuracy for each LSTM model.
+                # investigate the code to figure out how to get it to work...
+                # OR you can just do a straight up comparison in excel... but i woulnd't recommend that lol
+                forecastForFeat_i = self.LSTM_Models[i].forecastGiven(lookBackData)
+                features_forecasts.append(forecastForFeat_i)
+                # for t in timeSteps:
+                    # curr_forecast = formatFeatureSet(feat_forecast, timestep)
+            print("features_forecasts:", features_forecasts)
+            forecasted_Power = []
 
-        numOfFeats = self.getNumOfFeats()
-        for i in range(numOfFeats):
-            # TODO get unique look back for each feature from the same timesteps
-            # lookBackData = [[[-0.34587266],
-            #     [-0.34637179],
-            #     [-0.34822873],
-            #     [-0.35029343],
-            #     [-0.3497669 ],
-            #     [-0.35025731],
-            #     [-0.35231279],
-            #     [-0.35329935],
-            #     [-0.35478794],
-            #     [-0.35399758]]]
-            lookBackData = killme[i]
-            # TODO
-            # NOTE: You can modify the codde in the forecastGiven
-            # and add in the actual_Y.csv so that you can draw a graph
-            # of the accuracy for each LSTM model.
-            # investigate the code to figure out how to get it to work...
-            # OR you can just do a straight up comparison in excel... but i woulnd't recommend that lol
-            forecastForFeat_i = self.LSTM_Models[i].forecastGiven(lookBackData)
-            features_forecasts.append(forecastForFeat_i)
-            # for t in timeSteps:
-                # curr_forecast = formatFeatureSet(feat_forecast, timestep)
-        print("features_forecasts:", features_forecasts)
-        forecasted_Power = []
+            # w/ lstm configuration of : def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
+            # 1 - .20 % NN, .5 loss LStm
+            # 2 - 0.90 % NN, 0.01 loss LSTM
 
-        # w/ lstm configuration of : def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
-        # 1 - .20 % NN, .5 loss LStm
-        # 2 - 0.90 % NN, 0.01 loss LSTM
+            # w/ lstm configuration of :     def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
 
-        # w/ lstm configuration of :     def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
+            # 3 - 0.95 % NN, 0.001 loss LSTM
+            # 4 - 0.97 % NN, 0.0001 loss lstm
 
-        # 3 - 0.95 % NN, 0.001 loss LSTM
-        # 4 - 0.97 % NN, 0.0001 loss lstm
-        num = 4
+            # 5 - 0.95 % NN, 0.05 lss lstm decrements by 0.01 if testing does not meet requirements
+            num = "testing"
 
-        with open('superModel_Results_'+str(num), 'w') as csvFile:
-            wr = csv.writer(csvFile, delimiter=",")
+            testResults = []
+            actual_Y = [[17], [21], [19], [19], [16]]
+            num_timeSteps = 5
+            difference = []
+            graphTheTest = False
 
-            renewableModel_Test_accuracy_MA = self.renewableModel_Test_accuracy
-            # while renewableModel_Test_accuracy_MA < 0.50
+            with open('resUlts/superModel_Results_'+str(num), 'w') as csvFile:
+                wr = csv.writer(csvFile, delimiter=",")
 
-            for timestep in range(5):
-                currFeatsInTimestep = []
-                for feature in features_forecasts:
-                    currFeatsInTimestep.append(feature[0][timestep])
-                currFeatsInTimestep.append(feature[0][0])
-                wr.writerow([["currFeatsInTimestep_"+str(timestep)], currFeatsInTimestep])
-                print("Feats in timestep: " + str(timestep), currFeatsInTimestep)
-                print("currFeatsInTimestep :", currFeatsInTimestep)
-                curr_classification = self.NN.classifySetOf(currFeatsInTimestep)
+                renewableModel_Test_accuracy_MA = self.renewableModel_Test_accuracy
+                # while renewableModel_Test_accuracy_MA < 0.50
 
-                wr.writerow([["curr_classification_"+str(timestep)], curr_classification])
-                forecasted_Power.append(curr_classification)
+                for timestep in range(num_timeSteps):
+                    currFeatsInTimestep = []
+                    for feature in features_forecasts:
+                        currFeatsInTimestep.append(feature[0][timestep])
+                    currFeatsInTimestep.append(feature[0][0])
+                    wr.writerow([["currFeatsInTimestep_"+str(timestep)], currFeatsInTimestep])
+                    print("Feats in timestep: " + str(timestep), currFeatsInTimestep)
+                    print("currFeatsInTimestep :", currFeatsInTimestep)
 
-        print("forecasted_Power: ", forecasted_Power)
 
-        # answer should be 13 for the above
-        # while (True):
-        # # for each timestep in timesteps;
-        #     #curr_forecast =  getFeaturesFor[timestep]
-        #     try:
-        #         curr_forecast = [ 1.0, 0.27882305,  0.69449111, 0.25765821 , 0.11764706,  0.10740741, 0.28571429 , 0.0,0.82,        0.0,          0.9593099 ,  1.0,
-        #           0.27906977,  0.24418605,  0.24093023 , 0.26   ,     0.24132051 , 0.25139744,
-        #           0.23851726]
-        #         # curr_forecast are all of the features that the lstms have forecasted
-        #
-        #         print("curr forecast: ", curr_forecast)
-        #         curr_classification = self.NN.classifySetOf(curr_forecast)
-        #         forecasted_Power.append(curr_classification)
-        #         print("curr class: ", curr_classification)
-        #         x=input()
-        #     except:
-        #         break
-        # power_forecast.append(self.NN, curr_forecast)
-        # display(power_forecast, y)
+                    curr_classification = self.NN.classifySetOf(currFeatsInTimestep)
+                    act_Y = actual_Y[timestep][0]
+                    pred_Y = curr_classification[0]
+                    eclud_distance = math.sqrt((math.fabs(act_Y-pred_Y)**2 -  timestep) )
+                    difference.append(eclud_distance)
 
-        # except:
-        #     print("closing session.")
-        #     self.NN.closeSession()
+                    wr.writerow([["curr_classification_"+str(timestep)], curr_classification])
+                    forecasted_Power.append(curr_classification)
+
+                if (graphTheTest):
+                    #plt.subplot(numTests, 1, k)
+                    time = [x for x in range(num_timeSteps)]
+                    actY = np.squeeze(actual_Y)
+                    actY = actY.tolist()
+                    plt.plot(time,actY, color='green', linestyle=':' )
+                    forecasts = np.squeeze(forecasted_Power).tolist()
+                    plt.plot(time,forecasts, color='red' )
+                    plt.show()
+
+                masterTest_Accuracy_Avg+= math.fsum(difference)
+
+            print("forecasted_Power: ", forecasted_Power)
+
+        errorThreshold = 13.48 # error froom seq off by 1 , 2 , 3 , 4 ... N respective to time
+        masterTest_Accuracy_Avg/=numTests
+        if (errorThreshold <= masterTest_Accuracy_Avg):
+            self.reTrainLSTM = True
+            self.train(1)
+        else:
+            time = [x for x in range(num_timeSteps)]
+            actY = np.squeeze(actual_Y)
+            actY = actY.tolist()
+            plt.plot(time,actY, color='green', linestyle=':' )
+            forecasts = np.squeeze(forecasted_Power).tolist()
+            plt.plot(time,forecasts, color='red' )
+            plt.show()
+
 
         self.NN.closeSession()
         return 0
 
-    def train(self):
+    def train(self, state):
         # thread each model for training
         # continue training until NN > 95%
-        NN_targetAcc = 0.97
-        #try:
-        #self.NN.train(NN_targetAcc)
-        #except:
-    #    self.NN.closeSession()
-        # and loss over all feature models are satisfactory
+        if (state == 0):
+            NN_targetAcc = 0.95
+            #try:
+            self.NN.train(NN_targetAcc)
+
+            # TODO
+            # Have this decrease each time its called
+        targetLoss = 0.05 - 0.01
+
 
         for i in range(self.getNumOfFeats()):
-            self.LSTM_Models[i].train(target_loss = 0.0001)
+            self.LSTM_Models[i].train(target_loss = targetLoss)
 
             # single model testing, not super model testing as that is done in masterTest
             # self.LSTM_Models[0].test()
@@ -436,7 +462,7 @@ class renewableModel:
             # create lstm model for each feature
 
         # start training the models
-        self.train()
+        self.train(0)
 
     def printID(self):
         print("ID: ", self.id)

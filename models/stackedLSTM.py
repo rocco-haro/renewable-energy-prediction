@@ -285,7 +285,7 @@ class StackedLSTM:
                 y = y.squeeze()
                 next_t = next_t.squeeze()
                 prediction = prediction.squeeze()
-
+                print("predic:", prediction)
                 plt.plot(t, y, color='black')
                 plt.plot(np.append(t[-1], next_t), np.append(y[-1], expected_y), color='green', linestyle=':')
                 plt.plot(np.append(t[-1], next_t), np.append(y[-1], prediction), color='red')
