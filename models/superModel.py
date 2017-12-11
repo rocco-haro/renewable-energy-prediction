@@ -25,9 +25,9 @@ class renewableModel:
         # TODO
         # Have this decrease each time its called
         self.testNum            = "11"      # Increase this each time
-        self.highNoiseTarget    = .001
-        self.medNoiseTarget     = .0001
-        self.lowNoiseTarget     = .00001
+        self.highNoiseTarget    = 2
+        self.medNoiseTarget     = 2
+        self.lowNoiseTarget     = 2
         self.highNoiseFeatures  = ["events", "gust_speed", "power_EMA60", "power_EMA90", "conditions", "wind_dir", "power_out_prev"]
         self.medNoiseFeatures   = ["power_MA10", "power_MA25", "dew_point", "visibility", "wind_speed", "temp", "humidity"]
         self.lowNoiseFeatures   = ["pressure", "precip", "power_EMA30", "power_MA50"]
@@ -93,11 +93,10 @@ class renewableModel:
         lookBackDataFeature, futureFeature, actual_Y = self.getSuperTestData(batchSize, ySize)
         numOfFeats = self.getNumOfFeats()
 
-        numTests = 10
+        numTests = 1
         masterTest_Accuracy_Avg = 0
         for k in range(numTests):
-            numOfFeats = self.getNumOfFeats()
-            for i in range(numOfFeats):
+            for i in range(self.getNumOfFeats()):
                 lookBackData = lookBackDataFeature[i]
 
                 # TODO
@@ -159,7 +158,7 @@ class renewableModel:
         masterTest_Accuracy_Avg/=numTests
         if (errorThreshold <= masterTest_Accuracy_Avg):
             self.reTrainLSTM = True
-            self.train(1)
+            # self.train(1)
         else:
             time = [x for x in range(num_timeSteps)]
             actY = np.squeeze(actual_Y)
@@ -176,8 +175,7 @@ class renewableModel:
         # thread each model for training
         # continue training until NN > 95%
         if (state == 0):
-            NN_targetAcc = 0.97
-            #try:
+            NN_targetAcc = 0
             self.NN.train(NN_targetAcc)
 
         i = 0;
@@ -205,7 +203,7 @@ class renewableModel:
         for column in self.dataFrame:
             if column != "power_output": # TODO maybe don't include moving averages
                 self.countFeats+=1
-                curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=(column+"/"column+self.testNum))
+                curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=(column + "/" + column + self.testNum))
                 if column in self.highNoiseFeatures:
                     curr_lstm.networkParams(column, n_steps=20, n_layers=4) # can pass in custom configurations Note: necessary to call this function
                     self.LSTM_Models.append(curr_lstm)
@@ -237,7 +235,7 @@ if __name__ == "__main__":
     numOfRenewables = 1
     SM = superModel(numOfRenewables)
 
-    # w/ lstm configuration of : def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
+            # w/ lstm configuration of : def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
             # 1 - .20 % NN, .5 loss LStm
             # 2 - 0.90 % NN, 0.01 loss LSTM
             # w/ lstm configuration of :     def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
