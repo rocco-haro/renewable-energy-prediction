@@ -19,7 +19,7 @@ RANDOM_SEED = 42
 tf.set_random_seed(RANDOM_SEED)
 
 class neuralNetwork:
-    def __init__(self,ID, dataFileTarget, LOG_DIR="NN_LOG/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+    def __init__(self,ID, dataFileTarget, LOG_DIR="LOG/NN_LOG/temp", batchSize=144, hiddenSize=256, displaySteps=20):
         self.ID  = ID
         self.dataFileTarget = dataFileTarget
         self.LOG_DIR = LOG_DIR
@@ -155,6 +155,7 @@ class neuralNetwork:
     def classifySetOf(self, feats):
         # start a new session and run a classification with the already created model
         # against the passes in feats
+        
         train_X, test_X, train_y, test_Y = self.get_data()
         #print("test_X: ", test_X[0])
         #print("test_Y: ", test_Y[0])

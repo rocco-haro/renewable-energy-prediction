@@ -17,11 +17,11 @@ from tensorflow.contrib import rnn
 from typing import Optional, Tuple
 
 class StackedLSTM:
-    def __init__(self, dataFrame=None, modelName="_Unnamed!", learning_rate=0.00025, training_iters=1000000, training_iter_step_down_every=2500000, batch_size=40, display_step=100):
+    def __init__(self, dataFrame=None, modelName="_Unnamed!", learning_rate=0.00025, training_iters=1000000, training_iter_step_down_every=250000, batch_size=40, display_step=100):
         """ dataFileTarget="",modelName, learning_rate=0.005,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 10 , display_step = 100
         """
         # self.dataFileTarget = dataFileTarget
-        self.LOG_DIR = "LSTM_LOG/"+str(modelName)
+        self.LOG_DIR = "LOG/LSTM_LOG/"+str(modelName)
         self.dataFrame = dataFrame
         self.modelName = modelName
         self.learning_rate = learning_rate
@@ -32,8 +32,7 @@ class StackedLSTM:
 
         self.NetworkParametersSet = False
 
-    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
-
+    def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False):
         # Network Parameters
         self.ID = ID
         self.n_input = n_input # input is sin(x), a scalar
@@ -142,7 +141,7 @@ class StackedLSTM:
 
             # add ops to save and restore all variables
             saver = tf.train.Saver()
-
+            
             # Launch the graph
             with tf.Session() as sess:
                 sess.run(init)
@@ -175,9 +174,14 @@ class StackedLSTM:
                         batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
                         testing_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
 
+                        # EMA90 for loss threshold.
+                        ema_train_loss = ( (10*training_loss_value) + (training_loss_value * 90) ) / 100
+                        ema_test_loss = ( (10*testing_loss_value) + (testing_loss_value * 90) ) / 100
+
                         # Values to be written to tensorboard graphs
                         #train_sum = tf.Summary(value=[tf.Summary.Value(tag="Training Loss Value", simple_value=training_loss_value),])
-                        test_sum = tf.Summary(value=[tf.Summary.Value(tag="Training Loss Value", simple_value=testing_loss_value),])
+                        test_sum = tf.Summary(value=[tf.Summary.Value(tag="Testing Loss EMA90", simple_value=ema_test_loss),])
+                        
 
                         # Create placeholders for tensorboard values
                         #writer.add_summary(train_sum, step)

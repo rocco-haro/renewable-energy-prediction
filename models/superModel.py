@@ -3,7 +3,9 @@
 
 import models.stackedLSTM as modelBuilder_LSTM
 import pandas as pd
+import random
 import models.workingNN as NN
+import numpy as np
 import csv
 import math
 import matplotlib.pyplot as plt
@@ -19,6 +21,18 @@ class renewableModel:
         self.renewableModel_Test_accuracy = 0
         self.reTrainLSTM = False
         self.dataFrame = self.loadData()
+
+        # TODO
+        # Have this decrease each time its called
+        self.testNum            = "11"      # Increase this each time
+        self.highNoiseTarget    = .001
+        self.medNoiseTarget     = .0001
+        self.lowNoiseTarget     = .00001
+        self.highNoiseFeatures  = ["events", "gust_speed", "power_EMA60", "power_EMA90", "conditions", "wind_dir", "power_out_prev"]
+        self.medNoiseFeatures   = ["power_MA10", "power_MA25", "dew_point", "visibility", "wind_speed", "temp", "humidity"]
+        self.lowNoiseFeatures   = ["pressure", "precip", "power_EMA30", "power_MA50"]
+
+
         self.config()
 
     def loadData(self):
@@ -35,298 +49,57 @@ class renewableModel:
         # return the number of features in the data
         return self.countFeats
 
+    def getSuperTestData(self, lookBackSize, ySize):
+        # Grab a batch-sized batch of data
+
+        arr_lookBack = []
+        arr_futureFeature = []
+        sizeof_dataframe = self.dataFrame.shape[0]
+        sizeof_dataToPull = ySize + lookBackSize
+        # print(sizeof_dataframe)
+
+        # self.dataFrame location to pull data from
+        start = int(sizeof_dataframe * np.random.rand())
+        while (sizeof_dataframe < start + sizeof_dataToPull):
+            start = int(sizeof_dataframe * np.random.rand())
+
+        end_lookBack = start + lookBackSize
+        end_actualY = start + sizeof_dataToPull
+
+        for column in self.dataFrame:
+            if column != "power_output":
+                temp_arr = np.asarray(list(self.dataFrame[column][start:end_lookBack]))
+                temp_arr = temp_arr.reshape(1,lookBackSize, 1)
+                arr_lookBack.append(temp_arr)
+
+                temp_future = np.asarray(list(self.dataFrame[column][end_lookBack:end_actualY]))
+                arr_futureFeature.append(temp_future)
+
+
+        arr_actualY = np.asarray(list(self.dataFrame["power_output"][end_lookBack:end_actualY]))
+        arr_actualY = arr_actualY.reshape(ySize, 1)
+
+        return arr_lookBack, arr_futureFeature, arr_actualY
+
     def masterTest(self):
-        """
-        Label : Feats<>
-        19	0.1441566904	0.654695	0.2420514493	0.2941176471	-0.5518518519	0.1428571429	0.6032786885	0.5	0	0.9638671875	1	0.5348837209	0.5348837209	0.5348837209	0.5348837209	0.6697674419	0.6558139535	0.6837209302
-        21	0.1475406982	0.67611	0.2831937198	0.2941176471	-0.5333333333	0.1428571429	0.5475409836	0.52	0	0.9658203125	0.7	0.4418604651	0.4418604651	0.4418604651	0.4418604651	0.5888372093	0.5469767442	0.6390697674
-        19	0.1543119368	0.6888036111	0.2554714976	0.2941176471	-0.5333333333	0.1428571429	0.6032786885	0.52	0	0.9658203125	0.6	0.488372093	0.5279069767	0.5279069767	0.5279069767	0.5006511628	0.452372093	0.5799069767
-        19	0.1543119368	0.6888036111	0.2554714976	0.0588235294	-0.5333333333	0.1428571429	0.5475409836	0.52	0	0.9654947917	0.6	0.4418604651	0.5069767442	0.5069767442	0.5069767442	0.4932837209	0.484772093	0.5524465116
-        17	0.1553984474	0.6880211111	0.2524198068	0.1176470588	-0.5333333333	0.2857142857	0	0.52	0	0.9654947917	0.6	0.4418604651	0.4813953488	0.4813953488	0.4813953488	0.4624297674	0.4461516279	0.5192706977
-        21	0.1614521889	0.6907802778	0.2441910628	0.2941176471	-0.5333333333	0.1428571429	0.5655737705	0.52	0	0.9654947917	1	0.3953488372	0.4511627907	0.4511627907	0.4511627907	0.450088186	0.4422895814	0.4960476279
-        21	0.1679046177	0.6825419444	0.1898086473	0.1176470588	-0.5333333333	0.2857142857	0	0.52	0	0.9654947917	1	0.488372093	0.4418604651	0.4418604651	0.4418604651	0.4172445767	0.4000429116	0.4658379907
-        19	0.1652883809	0.6458975	0.117946715	0.2941176471	-0.6	0.1428571429	0.4901639344	0.48	0	0.9651692708	1	0.488372093	0.4395348837	0.4395348837	0.4395348837	0.4599210865	0.4795391749	0.4725982214
-        15	0.1645498985	0.6214372222	0.1046561594	0.1176470588	-0.6	0.2857142857	0	0.48	0	0.9651692708	1	0.4418604651	0.4302325581	0.4302325581	0.4302325581	0.4769916904	0.4874888012	0.4773303829
-        19	0.1810413307	0.6912244444	0.2210125362	0.1176470588	-0.6	0.2857142857	0	0.48	0	0.9651692708	1	0.3488372093	0.4348837209	0.4576744186	0.4576744186	0.4559129552	0.4464232987	0.4666894075
-        18	0.1816691056	0.6823580556	0.3033555556	0.1176470588	-0.6	0.2857142857	0	0.48	0	0.9651692708	1	0.4418604651	0.4348837209	0.4437209302	0.4437209302	0.3916675077	0.3585958182	0.4313337481
-
-        """
-        # for n number of test:
-            # y, testInput = getSample()
-            # for each feature in batch:
-                #feat_forecast.append(sess.run(self.LSTM_Models[feature], stripFeatureSequence(feature/idx, testInput)))
+        # batchSize:           number of past prediction to consider
+        # ySize:               number of future predictions to consider
+        # lookBackDataFeature: list of each LSTM's timestep data
+        # futureFeature:       list of what each LSTM's future values should be
+        # actual_Y:            list of power_output for each timestep
         features_forecasts = []
-        killme = dict()
-        killme[0] = [[[0.1441566904],
-                    [0.1475406982],
-                    [0.1543119368],
-                    [0.1543119368],
-                    [0.1553984474],
-                    [0.1614521889],
-                    [0.1679046177],
-                    [0.1652883809],
-                    [0.1645498985],
-                    [0.1810413307],
-                    [0.1816691056]]]
+        batchSize = self.LSTM_Models[0].n_steps
+        ySize = self.LSTM_Models[0].n_outputs
+        lookBackDataFeature, futureFeature, actual_Y = self.getSuperTestData(batchSize, ySize)
+        numOfFeats = self.getNumOfFeats()
 
-        killme[1] = [[
-                    [0.654695],
-            [0.67611],
-            [0.6888036111],
-            [0.6888036111],
-            [0.6880211111],
-            [0.6907802778],
-            [0.6825419444],
-            [0.6458975],
-            [0.6214372222],
-            [0.6912244444],
-            [0.6823580556],
-
-                    ]]
-
-        killme[2] = [[
-            [0.2420514493],
-            [0.2831937198],
-            [0.2554714976],
-            [0.2554714976],
-            [0.2524198068],
-            [0.2441910628],
-            [0.1898086473],
-            [0.117946715],
-            [0.1046561594],
-            [0.2210125362],
-            [0.3033555556]]]
-
-
-        killme[3] = [[
-            [0.2941176471],
-            [0.2941176471],
-            [0.2941176471],
-            [0.0588235294],
-            [0.1176470588],
-            [0.2941176471],
-            [0.1176470588],
-            [0.2941176471],
-            [0.1176470588],
-            [0.1176470588],
-            [0.1176470588]]
-                    ]
-
-
-        killme[4] = [[
-            [-0.5518518519],
-            [-0.5333333333],
-            [-0.5333333333],
-            [-0.5333333333],
-            [-0.5333333333],
-            [-0.5333333333],
-            [-0.5333333333],
-            [-0.6],
-            [-0.6],
-            [-0.6],
-            [-0.6]
-                    ]]
-
-        killme[5] = [[
-                [0.1428571429],
-                [0.1428571429],
-                [0.1428571429],
-                [0.1428571429],
-                [0.2857142857],
-                [0.1428571429],
-                [0.2857142857],
-                [0.1428571429],
-                [0.2857142857],
-                [0.2857142857],
-                [0.2857142857]
-                ]
-                        ]
-        killme[6] = [[
-            [0.6032786885],
-            [0.5475409836],
-            [0.6032786885],
-            [0.5475409836],
-            [0],
-            [0.5655737705],
-            [0],
-            [0.4901639344],
-            [0],
-            [0],
-            [0]
-                    ]]
-        killme[7] = [[
-            [0.5],
-            [0.52],
-            [0.52],
-            [0.52],
-            [0.52],
-            [0.52],
-            [0.52],
-            [0.48],
-            [0.48],
-            [0.48],
-            [0.48]]
-                    ]
-
-        killme[8] = [[
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0]]
-        ]
-
-        killme[9] = [[
-            [0.9638671875],
-            [0.9658203125],
-            [0.9658203125],
-            [0.9654947917],
-            [0.9654947917],
-            [0.9654947917],
-            [0.9654947917],
-            [0.9651692708],
-            [0.9651692708],
-            [0.9651692708],
-            [0.9651692708]]
-        ]
-
-        killme[10] = [[
-            [1],
-            [0.7],
-            [0.6],
-            [0.6],
-            [0.6],
-            [1],
-            [1],
-            [1],
-            [1],
-            [1],
-            [1]]
-                    ]
-
-        killme[11] = [[
-            [0.5348837209],
-            [0.4418604651],
-            [0.488372093],
-            [0.4418604651],
-            [0.4418604651],
-            [0.3953488372],
-            [0.488372093],
-            [0.488372093],
-            [0.4418604651],
-            [0.3488372093],
-            [0.4418604651]]
-        ]
-
-        killme[12] = [[
-            [0.5348837209],
-            [0.4418604651],
-            [0.5279069767],
-            [0.5069767442],
-            [0.4813953488],
-            [0.4511627907],
-            [0.4418604651],
-            [0.4395348837],
-            [0.4302325581],
-            [0.4348837209],
-            [0.4348837209]]
-        ]
-
-        killme[13] = [[
-            [0.5348837209],
-            [0.4418604651],
-            [0.5279069767],
-            [0.5069767442],
-            [0.4813953488],
-            [0.4511627907],
-            [0.4418604651],
-            [0.4395348837],
-            [0.4302325581],
-            [0.4576744186],
-            [0.4437209302]]
-
-
-        ]
-
-        killme[14] = [[
-            [0.5348837209],
-            [0.4418604651],
-            [0.5279069767],
-            [0.5069767442],
-            [0.4813953488],
-            [0.4511627907],
-            [0.4418604651],
-            [0.4395348837],
-            [0.4302325581],
-            [0.4576744186],
-            [0.4437209302]]
-        ]
-
-        killme[15] = [[
-            [0.6697674419],
-            [0.5888372093],
-            [0.5006511628],
-            [0.4932837209],
-            [0.4624297674],
-            [0.450088186],
-            [0.4172445767],
-            [0.4599210865],
-            [0.4769916904],
-            [0.4559129552],
-            [0.3916675077]]
-        ]
-
-        killme[16] = [[
-            [0.6558139535],
-            [0.5469767442],
-            [0.452372093],
-            [0.484772093],
-            [0.4461516279],
-            [0.4422895814],
-            [0.4000429116],
-            [0.4795391749],
-            [0.4874888012],
-            [0.4464232987],
-            [0.3585958182]]
-        ]
-
-        killme[17] = [[
-            [0.6837209302],
-            [0.6390697674],
-            [0.5799069767],
-            [0.5524465116],
-            [0.5192706977],
-            [0.4960476279],
-            [0.4658379907],
-            [0.4725982214],
-            [0.4773303829],
-            [0.4666894075],
-            [0.4313337481]]
-            ]
-
-        numTests = 1
+        numTests = 10
         masterTest_Accuracy_Avg = 0
         for k in range(numTests):
             numOfFeats = self.getNumOfFeats()
             for i in range(numOfFeats):
-                # TODO get unique look back for each feature from the same timesteps
-                # lookBackData = [[[-0.34587266],
-                #     [-0.34637179],
-                #     [-0.34822873],
-                #     [-0.35029343],
-                #     [-0.3497669 ],
-                #     [-0.35025731],
-                #     [-0.35231279],
-                #     [-0.35329935],
-                #     [-0.35478794],
-                #     [-0.35399758]]]
-                lookBackData = killme[i]
+                lookBackData = lookBackDataFeature[i]
+
                 # TODO
                 # NOTE: You can modify the codde in the forecastGiven
                 # and add in the actual_Y.csv so that you can draw a graph
@@ -335,32 +108,17 @@ class renewableModel:
                 # OR you can just do a straight up comparison in excel... but i woulnd't recommend that lol
                 forecastForFeat_i = self.LSTM_Models[i].forecastGiven(lookBackData)
                 features_forecasts.append(forecastForFeat_i)
-                # for t in timeSteps:
-                    # curr_forecast = formatFeatureSet(feat_forecast, timestep)
+
             print("features_forecasts:", features_forecasts)
+
             forecasted_Power = []
-
-            # w/ lstm configuration of : def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
-            # 1 - .20 % NN, .5 loss LStm
-            # 2 - 0.90 % NN, 0.01 loss LSTM
-
-            # w/ lstm configuration of :     def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
-
-            # 3 - 0.95 % NN, 0.001 loss LSTM
-            # 4 - 0.97 % NN, 0.0001 loss lstm
-
-            # 5 - 0.95 % NN, 0.05 lss lstm decrements by 0.01 if testing does not meet requirements
-            num = "testing"
-
             testResults = []
-            actual_Y = [[17], [21], [19], [19], [16]]
-            num_timeSteps = 5
+            num_timeSteps = ySize
             difference = []
-            graphTheTest = False
+            graphTheTest = True
 
-            with open('resUlts/superModel_Results_'+str(num), 'w') as csvFile:
+            with open('resUlts/superModel_Results_'+str(self.testNum), 'w') as csvFile:
                 wr = csv.writer(csvFile, delimiter=",")
-
                 renewableModel_Test_accuracy_MA = self.renewableModel_Test_accuracy
                 # while renewableModel_Test_accuracy_MA < 0.50
 
@@ -377,7 +135,7 @@ class renewableModel:
                     curr_classification = self.NN.classifySetOf(currFeatsInTimestep)
                     act_Y = actual_Y[timestep][0]
                     pred_Y = curr_classification[0]
-                    eclud_distance = math.sqrt((math.fabs(act_Y-pred_Y)**2 -  timestep) )
+                    eclud_distance = math.sqrt((math.fabs((act_Y-pred_Y)**2 -  timestep)))
                     difference.append(eclud_distance)
 
                     wr.writerow([["curr_classification_"+str(timestep)], curr_classification])
@@ -406,11 +164,10 @@ class renewableModel:
             time = [x for x in range(num_timeSteps)]
             actY = np.squeeze(actual_Y)
             actY = actY.tolist()
-            plt.plot(time,actY, color='green', linestyle=':' )
+            plt.plot(time,actY, color='green', linestyle=':')
             forecasts = np.squeeze(forecasted_Power).tolist()
-            plt.plot(time,forecasts, color='red' )
+            plt.plot(time,forecasts, color='red')
             plt.show()
-
 
         self.NN.closeSession()
         return 0
@@ -419,20 +176,21 @@ class renewableModel:
         # thread each model for training
         # continue training until NN > 95%
         if (state == 0):
-            NN_targetAcc = 0.95
+            NN_targetAcc = 0.97
             #try:
             self.NN.train(NN_targetAcc)
 
-            # TODO
-            # Have this decrease each time its called
-        targetLoss = 0.05 - 0.01
-
-
-        for i in range(self.getNumOfFeats()):
-            self.LSTM_Models[i].train(target_loss = targetLoss)
-
-            # single model testing, not super model testing as that is done in masterTest
-            # self.LSTM_Models[0].test()
+        i = 0;
+        for column in self.dataFrame:
+            if column in self.highNoiseFeatures:
+                self.LSTM_Models[i].train(target_loss=self.highNoiseTarget)
+                i += 1
+            elif column in self.medNoiseFeatures:
+                self.LSTM_Models[i].train(target_loss=self.medNoiseTarget)
+                i += 1
+            elif column in self.lowNoiseFeatures:
+                self.LSTM_Models[i].train(target_loss=self.lowNoiseTarget)
+                i += 1
 
         self.masterTest()
 
@@ -441,25 +199,22 @@ class renewableModel:
             # selecting network parameters?
         trainingDataPath = self.dataFileTarget # 12 is the most recent data with richer features (EMA)
         self.NN = NN.neuralNetwork(self.id, dataFileTarget=trainingDataPath) # configure options for NN ==  dataFileTarget="", LOG_DIR="LSTM_LOG/log_tb/temp", batchSize=144, hiddenSize=256, displaySteps=20):
-        x = dict()
-        x['temp'] = "temperature"
-        x['hum'] = " asdf "
 
         # initialize the LSTMS
             # couont how many features there are
-        count = 0
         for column in self.dataFrame:
             if column != "power_output": # TODO maybe don't include moving averages
                 self.countFeats+=1
-                curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=column)
-                curr_lstm.networkParams(column) # can pass in custom configurations Note: necessary to call this function
-                self.LSTM_Models.append(curr_lstm)
-                #count+=1
-
-       # curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFileTarget='models/varyingData/moving/temperature', modelName="temperature")
-
-        # for each F in len(features):
-            # create lstm model for each feature
+                curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=(column+"/"column+self.testNum))
+                if column in self.highNoiseFeatures:
+                    curr_lstm.networkParams(column, n_steps=20, n_layers=4) # can pass in custom configurations Note: necessary to call this function
+                    self.LSTM_Models.append(curr_lstm)
+                elif column in self.medNoiseFeatures:
+                    curr_lstm.networkParams(column, n_steps=40, n_layers=4) # can pass in custom configurations Note: necessary to call this function
+                    self.LSTM_Models.append(curr_lstm)
+                elif column in self.lowNoiseFeatures:
+                    curr_lstm.networkParams(column, n_steps=18, n_layers=3) # can pass in custom configurations Note: necessary to call this function
+                    self.LSTM_Models.append(curr_lstm)
 
         # start training the models
         self.train(0)
@@ -476,10 +231,39 @@ class superModel:
         self.renewableModels = []
         for i in range(numOfRenewables):
             self.renewableModels.append(renewableModel(i, "prod_Data/training_Data12.csv"))
-
         self.renewableModels[0].printID()
-
 
 if __name__ == "__main__":
     numOfRenewables = 1
     SM = superModel(numOfRenewables)
+
+    # w/ lstm configuration of : def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden= 2, n_outputs = 5 , n_layers = 2, loading=False  ):
+            # 1 - .20 % NN, .5 loss LStm
+            # 2 - 0.90 % NN, 0.01 loss LSTM
+            # w/ lstm configuration of :     def networkParams(self,ID, n_input = 1,n_steps = 11, n_hidden=20, n_outputs = 5 , n_layers = 5, loading=False  ):
+            # 3 - 0.95 % NN, 0.001 loss LSTM
+            # 4 - 0.97 % NN, 0.0001 loss lstm
+
+            # 5 - 0.95  % NN, 0.05 lss lstm decrements by 0.01 if testing does not meet requirements
+            # 6 - 0.965 % NN, 0.003 loss lstm decrements by 0.01 if testing does not meet requirements
+            #     n_steps=18, n_layers=18
+            # 7 - 0.97  % NN, .003 loss lstm decrements by 0.01 if testing does not meet requirements
+            #     n_steps=12,n_layers=4
+            # 8   0.97  % NN, .002 loss lstm decrements by 0.01 if testing does not meet requirements
+            #     n_steps=24,n_layers=4
+            # 9   0.97  % NN, .001 loss lstm decrements by 0.01 if testing does not meet requirements
+            #     n_steps=36,n_layers=4
+            # 10  
+            #     Noisy events | gust_speed
+            #     0.97  % NN, .001 loss lstm decrements by 0.01 if testing does not meet requirements
+            #     n_steps=40,n_layers=4
+            #     Smooth 
+            #     0.97  % NN, .0001 loss lstm decrements by 0.01 if testing does not meet requirements
+            #     n_steps=18,n_layers=4
+            # 11
+            # self.highNoiseTarget    = .001            n_steps=20, n_layers=4
+            # self.medNoiseTarget     = .0001           n_steps=40, n_layers=4
+            # self.lowNoiseTarget     = .00001          n_steps=18, n_layers=3
+            # self.highNoiseFeatures  = ["events", "gust_speed", "power_EMA60", "power_EMA90", "conditions", "wind_dir", "power_out_prev"]
+            # self.medNoiseFeatures   = ["power_MA10", "power_MA25", "dew_point", "visibility", "wind_speed", "temp", "humidity"]
+            # self.lowNoiseFeatures   = ["pressure", "precip", "power_EMA30", "power_MA50"]
