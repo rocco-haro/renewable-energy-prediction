@@ -1,2 +1,2 @@
-model_checkpoint_path: "power_EMA60"
-all_model_checkpoint_paths: "power_EMA60"
+model_checkpoint_path: "power_EMA6011"
+all_model_checkpoint_paths: "power_EMA6011"
