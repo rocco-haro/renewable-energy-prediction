@@ -87,19 +87,34 @@ class renewableModel:
         # lookBackDataFeature: list of each LSTM's timestep data
         # futureFeature:       list of what each LSTM's future values should be
         # actual_Y:            list of power_output for each timestep
-        features_forecasts = []
-        batchSize = self.LSTM_Models[0].n_steps
-        ySize = self.LSTM_Models[0].n_outputs
-        lookBackDataFeature, futureFeature, actual_Y = self.getSuperTestData(batchSize, ySize)
-        numOfFeats = self.getNumOfFeats()
+
+        maxBatchSize =  -100000 #self.LSTM_Models[0].n_steps
+        maxYSize = -100000 # self.LSTM_Models[0].n_outputs
+
+        for i in range(self.getNumOfFeats()):
+            if (self.LSTM_Models[i].n_steps > maxBatchSize):
+                maxBatchSize = self.LSTM_Models[i].n_steps
+            if (self.LSTM_Models[i].n_outputs > maxYSize):
+                maxYSize = self.LSTM_Models[i].n_outputs
+
+        lookBackDataFeature, futureFeature, actual_Y = self.getSuperTestData(maxBatchSize, maxYSize)
+
 
         numTests = 10
         masterTest_Accuracy_Avg = 0
         for k in range(numTests):
             numOfFeats = self.getNumOfFeats()
-            for i in range(numOfFeats):
-                lookBackData = lookBackDataFeature[i]
+            features_forecasts = []
+            lookBackDataFeature, futureFeature, actual_Y = self.getSuperTestData(maxBatchSize, maxYSize)
 
+            for i in range(numOfFeats):
+                steps = self.LSTM_Models[i].n_steps
+                print("loobackdata: ", lookBackDataFeature[i] )
+                # l, _, _ =  self.getSuperTestData(self.LSTM_Models[i].n_steps, self.LSTM_Models[i].n_outputs)  #lookBackDataFeature[i]
+                lookBackData = np.array(lookBackDataFeature[i][0][maxBatchSize-steps:]) # to feed in the correct amount of values .. we have varying lookback for the LSTM_Models
+                lookBackData = lookBackData.reshape(1, steps, 1)
+                print(lookBackDataFeature[i][0])
+                print(lookBackData)
                 # TODO
                 # NOTE: You can modify the codde in the forecastGiven
                 # and add in the actual_Y.csv so that you can draw a graph
@@ -113,7 +128,7 @@ class renewableModel:
 
             forecasted_Power = []
             testResults = []
-            num_timeSteps = ySize
+            num_timeSteps = maxYSize
             difference = []
             graphTheTest = True
 
@@ -138,8 +153,10 @@ class renewableModel:
                     eclud_distance = math.sqrt((math.fabs((act_Y-pred_Y)**2 -  timestep)))
                     difference.append(eclud_distance)
 
-                    wr.writerow([["curr_classification_"+str(timestep)], curr_classification])
+                    wr.writerow([["curr_classification_"+str(timestep) + "_testNumer: " +""str(k)], curr_classification])
                     forecasted_Power.append(curr_classification)
+
+                wr.writerow([["Actual y: "], actual_Y])
 
                 if (graphTheTest):
                     #plt.subplot(numTests, 1, k)
@@ -159,7 +176,7 @@ class renewableModel:
         masterTest_Accuracy_Avg/=numTests
         if (errorThreshold <= masterTest_Accuracy_Avg):
             self.reTrainLSTM = True
-            self.train(1)
+            #self.train(1)
         else:
             time = [x for x in range(num_timeSteps)]
             actY = np.squeeze(actual_Y)
@@ -205,7 +222,7 @@ class renewableModel:
         for column in self.dataFrame:
             if column != "power_output": # TODO maybe don't include moving averages
                 self.countFeats+=1
-                curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=(column+"/"column+self.testNum))
+                curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=("/" + column+self.testNum))
                 if column in self.highNoiseFeatures:
                     curr_lstm.networkParams(column, n_steps=20, n_layers=4) # can pass in custom configurations Note: necessary to call this function
                     self.LSTM_Models.append(curr_lstm)
@@ -230,7 +247,7 @@ class superModel:
     def __init__(self, numOfRenewables):
         self.renewableModels = []
         for i in range(numOfRenewables):
-            self.renewableModels.append(renewableModel(i, "prod_Data/training_Data12.csv"))
+            self.renewableModels.append(renewableModel(i, "prod_Data/training_Data.csv"))
         self.renewableModels[0].printID()
 
 if __name__ == "__main__":
@@ -253,11 +270,11 @@ if __name__ == "__main__":
             #     n_steps=24,n_layers=4
             # 9   0.97  % NN, .001 loss lstm decrements by 0.01 if testing does not meet requirements
             #     n_steps=36,n_layers=4
-            # 10  
+            # 10
             #     Noisy events | gust_speed
             #     0.97  % NN, .001 loss lstm decrements by 0.01 if testing does not meet requirements
             #     n_steps=40,n_layers=4
-            #     Smooth 
+            #     Smooth
             #     0.97  % NN, .0001 loss lstm decrements by 0.01 if testing does not meet requirements
             #     n_steps=18,n_layers=4
             # 11
