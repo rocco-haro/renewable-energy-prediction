@@ -21,7 +21,7 @@ class StackedLSTM:
         """ dataFileTarget="",modelName, learning_rate=0.005,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 10 , display_step = 100
         """
         # self.dataFileTarget = dataFileTarget
-        self.LOG_DIR = "LSTM_LOG/"+str(modelName)
+        self.LOG_DIR = "LOG/LSTM_LOG/"+str(modelName)
         self.dataFrame = dataFrame
         self.modelName = modelName
         self.learning_rate = learning_rate
@@ -174,9 +174,14 @@ class StackedLSTM:
                         batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
                         testing_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
 
+                        # EMA90 for loss threshold.
+                        ema_train_loss = ( (10*training_loss_value) + (training_loss_value * 90) ) / 100
+                        ema_test_loss = ( (10*testing_loss_value) + (testing_loss_value * 90) ) / 100
+
                         # Values to be written to tensorboard graphs
                         #train_sum = tf.Summary(value=[tf.Summary.Value(tag="Training Loss Value", simple_value=training_loss_value),])
-                        test_sum = tf.Summary(value=[tf.Summary.Value(tag="Testing Loss Value", simple_value=testing_loss_value),])
+                        test_sum = tf.Summary(value=[tf.Summary.Value(tag="Testing Loss EMA90", simple_value=ema_test_loss),])
+                        
 
                         # Create placeholders for tensorboard values
                         #writer.add_summary(train_sum, step)

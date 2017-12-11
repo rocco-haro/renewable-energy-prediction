@@ -19,7 +19,7 @@ RANDOM_SEED = 42
 tf.set_random_seed(RANDOM_SEED)
 
 class neuralNetwork:
-    def __init__(self,ID, dataFileTarget, LOG_DIR="NN_LOG/temp", batchSize=144, hiddenSize=256, displaySteps=20):
+    def __init__(self,ID, dataFileTarget, LOG_DIR="LOG/NN_LOG/temp", batchSize=144, hiddenSize=256, displaySteps=20):
         self.ID  = ID
         self.dataFileTarget = dataFileTarget
         self.LOG_DIR = LOG_DIR
