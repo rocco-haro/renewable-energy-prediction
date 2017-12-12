@@ -194,14 +194,15 @@ class StackedLSTM:
                               "{:.6f} Testing loss= {:.6f}".format(training_loss_value, testing_loss_value))
                     step += 1
                 print("Optimization Finished!")
+                # TODO
                 targetSavePath = "models/savedModels/" + self.modelName # need the underscore
-                if (not os.path.isdir(targetSavePath)):
-                    os.mkdir(targetSavePath)
-                #save_path = saver.save(sess, targetSavePath+"/"+self.modelName)
-                save_path = saver.save(sess, targetSavePath)
-
-                #print("Saving to : " + save_path)
-                print("Saving to: " + save_path)
+                # if (not os.path.isdir(targetSavePath)):
+                #     os.mkdir(targetSavePath)
+                # #save_path = saver.save(sess, targetSavePath+"/"+self.modelName)
+                # save_path = saver.save(sess, targetSavePath)
+                #
+                # #print("Saving to : " + save_path)
+                print("Would be Saving to: " + targetSavePath)
         else:
             print("*** stackedLSTM says: Network Parameters are not set or no dataFile target given.")
 
