@@ -24,10 +24,10 @@ class renewableModel:
 
         # TODO
         # Have this decrease each time its called
-        self.testNum            = "11"      # Increase this each time
-        self.highNoiseTarget    = 2
-        self.medNoiseTarget     = 2
-        self.lowNoiseTarget     = 2
+        self.testNum            = "21"      # Increase this each time
+        self.highNoiseTarget    = 0.001
+        self.medNoiseTarget     = 0.0001
+        self.lowNoiseTarget     = 0.00001
         self.highNoiseFeatures  = ["events", "gust_speed", "power_EMA60", "power_EMA90", "conditions", "wind_dir", "power_out_prev"]
         self.medNoiseFeatures   = ["power_MA10", "power_MA25", "dew_point", "visibility", "wind_speed", "temp", "humidity"]
         self.lowNoiseFeatures   = ["pressure", "precip", "power_EMA30", "power_MA50"]
@@ -97,10 +97,10 @@ class renewableModel:
             if (self.LSTM_Models[i].n_outputs > maxYSize):
                 maxYSize = self.LSTM_Models[i].n_outputs
 
-        lookBackDataFeature, futureFeature, actual_Y = self.getSuperTestData(maxBatchSize, maxYSize)
+        #lookBackDataFeature, futureFeature, actual_Y = self.getSuperTestData(maxBatchSize, maxYSize)
 
 
-        numTests = 1
+        numTests = 5
         masterTest_Accuracy_Avg = 0
         for k in range(numTests):
             numOfFeats = self.getNumOfFeats()
@@ -121,52 +121,72 @@ class renewableModel:
                 # of the accuracy for each LSTM model.
                 # investigate the code to figure out how to get it to work...
                 # OR you can just do a straight up comparison in excel... but i woulnd't recommend that lol
-                forecastForFeat_i = self.LSTM_Models[i].forecastGiven(lookBackData)
+                forecastForFeat_i = self.LSTM_Models[i].forecastGiven(lookBackData, futureFeature[i], self.testNum, k)
                 features_forecasts.append(forecastForFeat_i)
 
             print("features_forecasts:", features_forecasts)
 
             forecasted_Power = []
+            NNOnlyForecast = []
             testResults = []
             num_timeSteps = maxYSize
             difference = []
             graphTheTest = True
 
-            with open('resUlts/superModel_Results_'+str(self.testNum), 'w') as csvFile:
+            with open('resUlts/superModel_Results_'+str(self.testNum) + "_" + str(k), 'w') as csvFile:
                 wr = csv.writer(csvFile, delimiter=",")
                 renewableModel_Test_accuracy_MA = self.renewableModel_Test_accuracy
                 # while renewableModel_Test_accuracy_MA < 0.50
 
                 for timestep in range(num_timeSteps):
                     currFeatsInTimestep = []
+                    actualFeatsInTimestep = []
                     for feature in features_forecasts:
                         currFeatsInTimestep.append(feature[0][timestep])
-                    currFeatsInTimestep.append(feature[0][0])
+                    for act_feature in futureFeature:
+                        actualFeatsInTimestep.append(act_feature[timestep])
+
+                    currFeatsInTimestep.append(feature[0][0]) # Shouldnt have to do this but just a quick hack to get it to work..
+                    actualFeatsInTimestep.append(feature[0][0])
                     wr.writerow([["currFeatsInTimestep_"+str(timestep)], currFeatsInTimestep])
                     print("Feats in timestep: " + str(timestep), currFeatsInTimestep)
                     print("currFeatsInTimestep :", currFeatsInTimestep)
 
 
                     curr_classification = self.NN.classifySetOf(currFeatsInTimestep)
+
+                    # run the actual features in the future through the NN
+                    prep = np.squeeze(actualFeatsInTimestep).tolist()
+                    withRealFeatsClassification = self.NN.classifySetOf(prep)
+                    NNOnlyForecast.append(withRealFeatsClassification)
+
                     act_Y = actual_Y[timestep][0]
                     pred_Y = curr_classification[0]
                     eclud_distance = math.sqrt((math.fabs((act_Y-pred_Y)**2 -  timestep)))
                     difference.append(eclud_distance)
 
-                    wr.writerow([["curr_classification_"+str(timestep) + "_testNumer: " +""str(k)], curr_classification])
+                    wr.writerow([["curr_classification_"+str(timestep) + "_testNumer: " +""+str(k)], curr_classification])
                     forecasted_Power.append(curr_classification)
 
                 wr.writerow([["Actual y: "], actual_Y])
+                wr.writerow([["Actual features: "], futureFeature])
 
                 if (graphTheTest):
                     #plt.subplot(numTests, 1, k)
                     time = [x for x in range(num_timeSteps)]
                     actY = np.squeeze(actual_Y)
                     actY = actY.tolist()
-                    plt.plot(time,actY, color='green', linestyle=':' )
+                    plt.plot(time,actY, color='green')
                     forecasts = np.squeeze(forecasted_Power).tolist()
-                    plt.plot(time,forecasts, color='red' )
-                    plt.show()
+                    plt.plot(time,forecasts, color='red' , linestyle=':')
+                    NNOnlyResults = np.squeeze(NNOnlyForecast).tolist()
+                    plt.plot(time, NNOnlyResults, color='blue', linestyle=':')
+                    plotName = "ActualY_vs_Predicted_NN_"+self.testNum+"_"+str(k)+".svg"
+                    plt.xlabel('time')
+                    plt.ylabel('poweroutput')
+                    plt.title(plotName)
+                    plt.savefig("graphs/NN/"+plotName, format="svg" )
+                    #plt.show()
 
                 masterTest_Accuracy_Avg+= math.fsum(difference)
 
@@ -193,7 +213,7 @@ class renewableModel:
         # thread each model for training
         # continue training until NN > 95%
         if (state == 0):
-            NN_targetAcc = 0
+            NN_targetAcc = 0.975
             self.NN.train(NN_targetAcc)
 
         i = 0;
@@ -221,17 +241,17 @@ class renewableModel:
         for column in self.dataFrame:
             if column != "power_output": # TODO maybe don't include moving averages
                 self.countFeats+=1
-                
+
                 curr_lstm = modelBuilder_LSTM.StackedLSTM(dataFrame=self.dataFrame[column], modelName=(column + "/" + column + self.testNum))
 
                 if column in self.highNoiseFeatures:
-                    curr_lstm.networkParams(column, n_steps=20, n_layers=4) # can pass in custom configurations Note: necessary to call this function
+                    curr_lstm.networkParams(column, n_steps=20, n_layers=5) # can pass in custom configurations Note: necessary to call this function
                     self.LSTM_Models.append(curr_lstm)
                 elif column in self.medNoiseFeatures:
-                    curr_lstm.networkParams(column, n_steps=40, n_layers=4) # can pass in custom configurations Note: necessary to call this function
+                    curr_lstm.networkParams(column, n_steps=36, n_layers=5) # can pass in custom configurations Note: necessary to call this function
                     self.LSTM_Models.append(curr_lstm)
                 elif column in self.lowNoiseFeatures:
-                    curr_lstm.networkParams(column, n_steps=18, n_layers=3) # can pass in custom configurations Note: necessary to call this function
+                    curr_lstm.networkParams(column, n_steps=25, n_layers=5) # can pass in custom configurations Note: necessary to call this function
                     self.LSTM_Models.append(curr_lstm)
 
         # start training the models
@@ -248,7 +268,7 @@ class superModel:
     def __init__(self, numOfRenewables):
         self.renewableModels = []
         for i in range(numOfRenewables):
-            self.renewableModels.append(renewableModel(i, "prod_Data/training_Data.csv"))
+            self.renewableModels.append(renewableModel(i, "prod_Data/training_Data12.csv"))
         self.renewableModels[0].printID()
 
 if __name__ == "__main__":
@@ -279,6 +299,17 @@ if __name__ == "__main__":
             #     0.97  % NN, .0001 loss lstm decrements by 0.01 if testing does not meet requirements
             #     n_steps=18,n_layers=4
             # 11
+
+
+
+            # 20
+                            # if column in self.highNoiseFeatures:
+                            #     curr_lstm.networkParams(column, n_steps=20, n_layers=5) # can pass in custom configurations Note: necessary to call this function
+                            # elif column in self.medNoiseFeatures:
+                            #     curr_lstm.networkParams(column, n_steps=36, n_layers=5) # can pass in custom configurations Note: necessary to call this function
+                            # elif column in self.lowNoiseFeatures:
+                            #     curr_lstm.networkParams(column, n_steps=25, n_layers=5)
+
             # self.highNoiseTarget    = .001            n_steps=20, n_layers=4
             # self.medNoiseTarget     = .0001           n_steps=40, n_layers=4
             # self.lowNoiseTarget     = .00001          n_steps=18, n_layers=3

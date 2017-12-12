@@ -141,7 +141,7 @@ class StackedLSTM:
 
             # add ops to save and restore all variables
             saver = tf.train.Saver()
-            
+
             # Launch the graph
             with tf.Session() as sess:
                 sess.run(init)
@@ -181,7 +181,7 @@ class StackedLSTM:
                         # Values to be written to tensorboard graphs
                         #train_sum = tf.Summary(value=[tf.Summary.Value(tag="Training Loss Value", simple_value=training_loss_value),])
                         test_sum = tf.Summary(value=[tf.Summary.Value(tag="Testing Loss EMA90", simple_value=ema_test_loss),])
-                        
+
 
                         # Create placeholders for tensorboard values
                         #writer.add_summary(train_sum, step)
@@ -240,7 +240,7 @@ class StackedLSTM:
 
             plt.show()
 
-    def forecastGiven(self, lookBackData):
+    def forecastGiven(self, lookBackData, actualY, expID, testNum):
         init = tf.global_variables_initializer()
         n_tests = 1
         with tf.Session() as sess:
@@ -252,23 +252,42 @@ class StackedLSTM:
                 #test_input = y.reshape((1, self.n_steps, self.n_input))
             #    print("test_input: ", test_input)
                 prediction = sess.run(self.pred, feed_dict={self.x: lookBackData})
+                #print("prediction: ", prediction)
+                #print("actualY: ", actualY)
             #    print("prediction: ", prediction)
-                return prediction
+
                 # remove the batch size dimensions
 
+
+
+                p = np.squeeze(prediction)
+                p = p.tolist()
+                y = actualY.tolist()
+                time = [x for x in range(self.n_outputs)]
+
+                plt.plot(time, y, color='green', linestyle=':' )
+                plt.plot(time, p, color='red')
+
+                plt.xlabel('time')
+                plt.ylabel('Feature Value')
+                graphName = "ActualY_vs_Predicted_LSTM_" + self.ID + "_" + str(expID) + "_"+ str(testNum) + ".svg"
+                plt.title(graphName)
+                plt.savefig("graphs/LSTMS/" +graphName, format="svg" )
+                plt.clf()
                 #NOTE shtuff under here makes the perty graphs
+                return prediction
+                # t = t.squeeze()
+                # #y = y.squeeze()
+                # next_t = next_t.squeeze()
+                # prediction = prediction.squeeze()
+                #
+                # plt.plot(t, y, color='black') # this is the lookBackData
+                # plt.plot(np.append(t[-1], next_t), np.append(y[-1], expected_y), color='green', linestyle=':') #this is the actual_Y.csv data
+                # plt.plot(np.append(t[-1], next_t), np.append(y[-1], prediction), color='red') # this is the superModel_Results_1.csv
+                # plt.ylim([-1,1])
+                # plt.xlabel('time [t]')
+                # plt.ylabel('temp')
 
-                t = t.squeeze()
-                #y = y.squeeze()
-                next_t = next_t.squeeze()
-                prediction = prediction.squeeze()
-
-                plt.plot(t, y, color='black') # this is the lookBackData
-                plt.plot(np.append(t[-1], next_t), np.append(y[-1], expected_y), color='green', linestyle=':') #this is the actual_Y.csv data
-                plt.plot(np.append(t[-1], next_t), np.append(y[-1], prediction), color='red') # this is the superModel_Results_1.csv
-                plt.ylim([-1,1])
-                plt.xlabel('time [t]')
-                plt.ylabel('temp')
 
             plt.show()
 
