@@ -149,13 +149,14 @@ class neuralNetwork:
             epoch+=1
 
 
+
     def closeSession(self):
         self.sess.close()
 
     def classifySetOf(self, feats):
         # start a new session and run a classification with the already created model
         # against the passes in feats
-        
+
         train_X, test_X, train_y, test_Y = self.get_data()
         #print("test_X: ", test_X[0])
         #print("test_Y: ", test_Y[0])

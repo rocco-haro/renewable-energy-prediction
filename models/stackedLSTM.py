@@ -17,7 +17,7 @@ from tensorflow.contrib import rnn
 from typing import Optional, Tuple
 
 class StackedLSTM:
-    def __init__(self, dataFrame=None, modelName="_Unnamed!", learning_rate=0.00025, training_iters=1000000, training_iter_step_down_every=250000, batch_size=40, display_step=100):
+    def __init__(self, dataFrame=None, modelName="_Unnamed!", learning_rate=0.00005, training_iters=2000000, training_iter_step_down_every=250000, batch_size=40, display_step=100):
         """ dataFileTarget="",modelName, learning_rate=0.005,training_iters = 1000000,training_iter_step_down_every = 250000, batch_size = 10 , display_step = 100
         """
         # self.dataFileTarget = dataFileTarget
@@ -205,6 +205,95 @@ class StackedLSTM:
                 print("Would be Saving to: " + targetSavePath)
         else:
             print("*** stackedLSTM says: Network Parameters are not set or no dataFile target given.")
+
+    def trainKickOut(self, popOutAtDifference):
+        """
+        does everything the training function can do, but it just kicks out much earlier when the
+        loss starts to level out
+        """
+        if (self.NetworkParametersSet and self.dataFrame is not None):
+            # Initializing the variables
+            init = tf.global_variables_initializer()
+            indiker_1 = 1000000 # indicators to measure change over iterations
+            indiker_2 = 0
+            # add ops to save and restore all variables
+            saver = tf.train.Saver()
+
+            # Launch the graph
+            with tf.Session() as sess:
+                sess.run(init)
+                step = 1
+
+                training_loss_value = float('+Inf')
+                testing_loss_value = float('+Inf')
+
+                # Writes tensorboard logs
+                writer = tf.summary.FileWriter(self.LOG_DIR, sess.graph)
+
+                # Keep training until reach max iterations
+                while (step * self.batch_size < self.training_iters) and (idiker_1 - indiker_2 > popOutAtDifference):
+                    current_learning_rate = self.learning_rate
+                    current_learning_rate *= 0.1 ** ((step * self.batch_size) // self.training_iter_step_down_every)
+
+                    _, batch_x, __, batch_y = self.generateSubset(training=True, batch_size=self.batch_size, samples=self.n_steps, predict=self.n_outputs)
+                    batch_x = batch_x.reshape((self.batch_size, self.n_steps, self.n_input))
+                    batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
+
+                    # Run optimization op (backprop)
+                    sess.run(self.optimizer, feed_dict={self.x: batch_x, self.y: batch_y, self.lr: current_learning_rate})
+                    if step % self.display_step == 0:
+                        # Calculate batch loss
+                        training_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
+
+                        # Run on test data
+                        _, batch_x, __, batch_y = self.generateSubset(training=False, batch_size=self.batch_size, samples=self.n_steps, predict=self.n_outputs)
+                        batch_x = batch_x.reshape((self.batch_size, self.n_steps, self.n_input))
+                        batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
+                        testing_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
+
+
+                        indiker_2 = testing_loss_value
+                        # EMA90 for loss threshold.
+                        ema_train_loss = ( (10*training_loss_value) + (training_loss_value * 90) ) / 100
+                        ema_test_loss = ( (10*testing_loss_value) + (testing_loss_value * 90) ) / 100
+
+                        # Values to be written to tensorboard graphs
+                        #train_sum = tf.Summary(value=[tf.Summary.Value(tag="Training Loss Value", simple_value=training_loss_value),])
+                        test_sum = tf.Summary(value=[tf.Summary.Value(tag="Testing Loss EMA90", simple_value=ema_test_loss),])
+
+
+                        # Create placeholders for tensorboard values
+                        #writer.add_summary(train_sum, step)
+                        writer.add_summary(test_sum, step)
+
+                        # Write values to tensorboard
+                        writer.flush()
+
+                        print("Iter " + str(step * self.batch_size) + ", Training Loss= " +
+                              "{:.6f} Testing loss= {:.6f}".format(training_loss_value, testing_loss_value))
+
+                    if step % self.display_step*2 == 0:
+                                                # Run on test data
+                        _, batch_x, __, batch_y = self.generateSubset(training=False, batch_size=self.batch_size, samples=self.n_steps, predict=self.n_outputs)
+                        batch_x = batch_x.reshape((self.batch_size, self.n_steps, self.n_input))
+                        batch_y = batch_y.reshape((self.batch_size,self. n_outputs))
+                        testing_loss_value = sess.run(self.loss, feed_dict={self.x: batch_x, self.y: batch_y})
+                        indiker_1 = testing_loss_value
+
+                    step += 1
+                print("Optimization Finished!")
+                # TODO
+                targetSavePath = "models/savedModels/" + self.modelName # need the underscore
+                # if (not os.path.isdir(targetSavePath)):
+                #     os.mkdir(targetSavePath)
+                # #save_path = saver.save(sess, targetSavePath+"/"+self.modelName)
+                # save_path = saver.save(sess, targetSavePath)
+                #
+                # #print("Saving to : " + save_path)
+                print("Would be Saving to: " + targetSavePath)
+        else:
+            print("*** stackedLSTM says: Network Parameters are not set or no dataFile target given.")
+
 
     def restoreModel(self, targetModel):
         # Test the prediction
